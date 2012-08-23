@@ -205,7 +205,7 @@ int initConvolution (
   unsigned int i,c;
 
   /* zita-conv settings */
-  const float dens = 0;
+  const float dens = 0; /* 0<= dens <= 1.0 ; '0' = auto (1.0 / min(inchn,outchn) */
   const unsigned int size = 204800;
   const unsigned int options = 0;
 
@@ -239,10 +239,10 @@ int initConvolution (
   if (clv->convproc->configure (
 	/*in*/  channels,
 	/*out*/ channels,
-	/*max-convolution length */ size,
+	/*max-convolution length */ size, //< TODO make configurable, must be <= 0x00100000
 	/*fragm*/    buffersize,
-	/*min-part*/ buffersize,
-	/*max-part*/ buffersize /*Convproc::MAXPART*/
+	/*min-part*/ buffersize /* must be >= fragm */,
+	/*max-part*/ buffersize /* Convproc::MAXPART -> stich output every period */
 	)) {
     fprintf (stderr, "convoLV2: Cannot initialize convolution engine.\n");
     return -1;
