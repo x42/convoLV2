@@ -220,10 +220,10 @@ int initConvolution (
   clv->convproc->set_density (dens);
 
   if (clv->convproc->configure (
-	/*in*/channels,
+	/*in*/  channels,
 	/*out*/ channels,
-	size,
-	/*fragm*/buffersize,
+	/*max-convolution length */ size,
+	/*fragm*/    buffersize,
 	/*min-part*/ buffersize,
 	/*max-part*/ buffersize /*Convproc::MAXPART*/
 	)) {
@@ -232,7 +232,7 @@ int initConvolution (
   }
 
   if (audiofile_read(clv->ir_fn, sample_rate, &p, &nchan, &nfram)) {
-    fprintf(stderr, "convoLV2: failed to read IR \n");
+    fprintf(stderr, "convoLV2: failed to read IR.\n");
     return -1;
   }
 
