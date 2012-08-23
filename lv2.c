@@ -72,7 +72,7 @@ instantiate(const LV2_Descriptor*     descriptor,
   }
 
   clv->bufsize = 1024;
-  clv->bufsize = 1; // XXX force re-init
+  clv->bufsize = 4096; // XXX force re-init
   clv->rate = rate;
   clv->reinit_in_progress = 0;
 
