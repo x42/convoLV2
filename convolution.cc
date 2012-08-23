@@ -81,7 +81,6 @@ struct LV2convolv {
 int audiofile_read (const char *fn, const int sample_rate, float **buf, unsigned int *n_ch, unsigned int *n_sp) {
   SF_INFO nfo;
   SNDFILE  *sndfile;
-  int ok = -2;
   float resample_ratio = 1.0;
 
   memset(&nfo, 0, sizeof(SF_INFO));
@@ -117,14 +116,19 @@ int audiofile_read (const char *fn, const int sample_rate, float **buf, unsigned
       if (!rdb) {
 	fprintf (stderr, "convoLV2: memory allocation failed for IR resample buffer.\n");
 	sf_close (sndfile);
+	free(*buf);
 	return -1;
       }
     }
 
-    if(nfo.frames == (rd=sf_readf_float(sndfile, rdb, nfo.frames))) {
-      ok=0;
-    } else {
+    if(nfo.frames != (rd=sf_readf_float(sndfile, rdb, nfo.frames))) {
       fprintf(stderr, "convoLV2: IR short read %ld of %ld\n", (long int) rd, (long int) nfo.frames);
+      free(*buf);
+      if (resample_ratio != 1.0) {
+	free(rdb);
+      }
+      sf_close (sndfile);
+      return -3;
     }
 
     if (resample_ratio != 1.0) {
@@ -151,7 +155,7 @@ int audiofile_read (const char *fn, const int sample_rate, float **buf, unsigned
   }
 
   sf_close (sndfile);
-  return (ok);
+  return (0);
 }
 
 LV2convolv *allocConvolution() {
@@ -222,9 +226,7 @@ int initConvolution (
     LV2convolv *clv,
     const unsigned int sample_rate,
     const unsigned int channels,
-    const unsigned int buffersize,
-    int sched_priority,
-    int sched_policy)
+    const unsigned int buffersize)
 {
   unsigned int i,c;
 
@@ -283,6 +285,7 @@ int initConvolution (
   gb = (float*) malloc(nfram*sizeof(float));
   if (!gb) {
     fprintf (stderr, "convoLV2: memory allocation failed for convolution buffer.\n");
+    free(p);
     return -1;
   }
 
@@ -290,10 +293,12 @@ int initConvolution (
 
     if (clv->ir_chan[c] > nchan || clv->ir_chan[c] < 1) {
       fprintf(stderr, "convoLV2: invalid channel in IR file; expected: 1 <= %d <= %d\n", clv->ir_chan[c], nchan);
+      free(p); free(gb);
       return -1;
     }
     if (clv->ir_delay[c] < 0) {
       fprintf(stderr, "convoLV2: invalid delay; expected: 0 <= %d\n", clv->ir_delay[c]);
+      free(p); free(gb);
       return -1;
     }
 
