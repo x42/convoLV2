@@ -181,6 +181,14 @@ void releaseConvolution (LV2convolv *clv) {
   clv->convproc = NULL;
 }
 
+void cloneConvolutionParams(LV2convolv *clv_new, LV2convolv *clv) {
+  memcpy(clv_new, clv, sizeof(LV2convolv));
+  clv->convproc = NULL;
+  if (clv->ir_fn) {
+    clv_new->ir_fn = strdup(clv->ir_fn);
+  }
+}
+
 void freeConvolution (LV2convolv *clv) {
   releaseConvolution(clv);
   if (clv->ir_fn) {
@@ -328,6 +336,12 @@ void copy_input_to_output(const float * const * inbuf, float * const * outbuf, s
     memcpy(outbuf[c], inbuf[c], n_samples * sizeof(float));
 }
 
+void silent_output(float * const * outbuf, size_t n_channels, size_t n_samples) {
+  unsigned int c;
+  for (c=0; c < n_channels; ++c)
+    memset(outbuf[c], 0, n_samples * sizeof(float));
+}
+
 /*
  *
  */
@@ -341,14 +355,18 @@ int convolve (LV2convolv *clv, const float * const * inbuf, float * const * outb
   if (clv->convproc->state () == Convproc::ST_WAIT) clv->convproc->check_stop ();
 
   if (clv->fragment_size != n_samples) {
+    silent_output(outbuf, n_channels, n_samples);
     return (-1);
   }
 
   if (n_channels > MAX_AUDIO_CHANNELS) {
+    silent_output(outbuf, n_channels, n_samples);
     return (-2);
   }
 
   if (clv->convproc->state () != Convproc::ST_PROC) {
+    /* Note this will actually never happen in sync-mode */
+    fprintf(stderr, "fons br0ke libzita-resampler.\n");
     copy_input_to_output(inbuf, outbuf, n_channels, n_samples);
     return (n_samples);
   }
@@ -368,6 +386,8 @@ int convolve (LV2convolv *clv, const float * const * inbuf, float * const * outb
   int f = clv->convproc->process (false);
 
   if (f /*&Convproc::FL_LOAD)*/ ) {
+    /* Note this will actually never happen in sync-mode */
+    fprintf(stderr, "fons br0ke libzita-resampler.\n");
     copy_input_to_output(inbuf, outbuf, n_channels, n_samples);
     return (n_samples);
   }

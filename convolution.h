@@ -37,6 +37,7 @@ extern void freeConvolution (LV2convolv *clv);
 int configConvolution (LV2convolv *clv, const char *key, const char *value);
 extern int initConvolution (LV2convolv *clv, const unsigned int sample_rate, const unsigned int channels, const unsigned int buffersize);
 extern void releaseConvolution (LV2convolv *clv);
+void cloneConvolutionParams(LV2convolv *clv_new, LV2convolv *clv);
 
 extern int convolve (LV2convolv *clv, const float * const * inbuf, float * const* outbuf, size_t n_channels, size_t n_samples);
 
