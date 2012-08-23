@@ -1,7 +1,7 @@
 OPTIMIZATIONS ?= -msse -msse2 -mfpmath=sse -ffast-math -fomit-frame-pointer -O3 -fno-finite-math-only
 
 PREFIX ?= /usr/local
-CFLAGS ?= $(OPTIMIZATIONS)
+CFLAGS ?= $(OPTIMIZATIONS) -Wall
 
 lv2dir = $(PREFIX)/lib/lv2
 LOADLIBES=-lm
@@ -12,11 +12,11 @@ ifeq ($(shell pkg-config --exists lv2 lv2core || echo no), no)
   $(error "LV2 SDK was not found")
 endif
 
-ifeq ($(shell pkg-config --exists sndfile \
+ifeq ($(shell pkg-config --exists sndfile samplerate\
         && test -f /usr/include/zita-convolver.h -o -f /usr/local/include/zita-convolver.h \
         && echo yes), yes)
-  CFLAGS+=`pkg-config --cflags sndfile`
-  LOADLIBES+=-lzita-convolver `pkg-config --libs sndfile`
+  CFLAGS+=`pkg-config --cflags sndfile samplerate`
+  LOADLIBES+=-lzita-convolver `pkg-config --libs sndfile samplerate`
   BXCC=$(CXX)
 else
   $(error "libzita-convolver3 and libsndfile are required")

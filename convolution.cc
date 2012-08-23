@@ -27,7 +27,12 @@
 
 #include <zita-convolver.h>
 #include <sndfile.h>
+#include <samplerate.h>
 #include "convolution.h"
+
+#ifndef SRC_QUALITY // alternatives: SRC_SINC_FASTEST, SRC_SINC_BEST_QUALITY, (SRC_ZERO_ORDER_HOLD, SRC_LINEAR)
+#define SRC_QUALITY SRC_SINC_MEDIUM_QUALITY
+#endif
 
 struct LV2convolv {
   Convproc *convproc;
@@ -51,32 +56,74 @@ int audiofile_read (const char *fn, const int sample_rate, float **buf, unsigned
   SF_INFO nfo;
   SNDFILE  *sndfile;
   int ok = -2;
+  float resample_ratio = 1.0;
 
   memset(&nfo, 0, sizeof(SF_INFO));
 
   if ((sndfile = sf_open(fn, SFM_READ, &nfo)) == 0)
     return -1;
-  if (sample_rate != nfo.samplerate) {
-    fprintf(stderr, "convoLV2: samplerate mismatch file:%d synth:%d\n", nfo.samplerate, sample_rate);
-  }
 
   if (n_ch) *n_ch = (unsigned int) nfo.channels;
   if (n_sp) *n_sp = (unsigned int) nfo.frames;
 
+  if (sample_rate != nfo.samplerate) {
+    fprintf(stderr, "convoLV2: samplerate mismatch file:%d host:%d\n", nfo.samplerate, sample_rate);
+    resample_ratio = (float) sample_rate / (float) nfo.samplerate;
+  }
+
   if (buf) {
-    const size_t frames = nfo.channels*nfo.frames;
-    *buf = (float*) malloc(frames*sizeof(float));
-    if (*buf) {
-      sf_count_t rd;
-      if(nfo.frames == (rd=sf_readf_float(sndfile, *buf, nfo.frames))) {
-	ok=0;
-      } else {
-	fprintf(stderr, "convoLV2: IR short read %ld of %ld\n", (long int) rd, (long int) nfo.frames);
-      }
-    } else {
+    const size_t frames_in = nfo.channels * nfo.frames;
+    const size_t frames_out = nfo.channels * ceil(nfo.frames * resample_ratio);
+    sf_count_t rd;
+    float *rdb;
+    *buf = (float*) malloc(frames_out*sizeof(float));
+
+    if (!*buf) {
       fprintf (stderr, "convoLV2: memory allocation failed for IR audio-file buffer.\n");
+      sf_close (sndfile);
+      return (-2);
+    }
+
+    if (resample_ratio == 1.0) {
+      rdb = *buf;
+    } else {
+      rdb = (float*) malloc(frames_in*sizeof(float));
+      if (!rdb) {
+	fprintf (stderr, "convoLV2: memory allocation failed for IR resample buffer.\n");
+	sf_close (sndfile);
+	return -1;
+      }
+    }
+
+    if(nfo.frames == (rd=sf_readf_float(sndfile, rdb, nfo.frames))) {
+      ok=0;
+    } else {
+      fprintf(stderr, "convoLV2: IR short read %ld of %ld\n", (long int) rd, (long int) nfo.frames);
+    }
+
+    if (resample_ratio != 1.0) {
+      fprintf(stderr, "convoLV2: resampling IR %ld -> %ld [frames * channels].\n", frames_in, frames_out);
+      SRC_STATE* src_state = src_new(SRC_QUALITY, nfo.channels, NULL);
+      SRC_DATA src_data;
+
+      src_data.input_frames  = nfo.frames;
+      src_data.output_frames = nfo.frames * resample_ratio;
+      src_data.end_of_input  = 1;
+      src_data.src_ratio     = resample_ratio;
+      src_data.input_frames_used = 0;
+      src_data.output_frames_gen = 0;
+      src_data.data_in       = rdb;
+      src_data.data_out      = *buf;
+      src_process(src_state, &src_data);
+      fprintf(stderr, "convoLV2: resampled IR  %ld -> %ld [frames * channels].\n",
+	  src_data.input_frames_used * nfo.channels,
+	  src_data.output_frames_gen * nfo.channels);
+
+      if (n_sp) *n_sp = (unsigned int) src_data.output_frames_gen;
+      free(rdb);
     }
   }
+
   sf_close (sndfile);
   return (ok);
 }
