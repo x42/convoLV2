@@ -1,0 +1,46 @@
+/* setBfree - DSP tonewheel organ
+ *
+ * Copyright (C) 2012 Robin Gareus <robin@gareus.org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  
+ */
+
+#ifndef CONVOLUTION_H
+#define CONVOLUTION_H
+
+
+#define MAX_AUDIO_CHANNELS (2) 
+
+/* zita-convolver lib is C++ so we need extern "C" in order to link 
+ * functions using it. */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct LV2convolv LV2convolv;
+
+extern LV2convolv *allocConvolution();
+extern void freeConvolution (LV2convolv *clv);
+
+int configConvolution (LV2convolv *clv, const char *key, const char *value);
+extern int initConvolution (LV2convolv *clv, const unsigned int sample_rate, const unsigned int channels, const unsigned int buffersize, int sched_priority, int sched_policy);
+
+extern void convolve (LV2convolv *clv, const float * const * inbuf, float * const* outbuf, size_t n_channels, size_t n_samples);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif
