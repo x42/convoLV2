@@ -20,15 +20,17 @@
 /* Usage information:
  *
  * Non-realtime, initialization:
- * 1)  allocConvolution();
- * 2)  configConvolution(); // can be called multiple times
- * 3)  initConvolution();   // fix settings
+ *  1)  allocConvolution();
+ *  2)  configConvolution(); // can be called multiple times
+ *  3)  initConvolution();   // fix settings
  *
  * Realtime process
- * 4)  convolve();
+ *  4)  convolve();
  *
  * Non-rt, cleanup
- * 5) freeConvolution();
+ *  5A) releaseConvolution(); // -> goto (2) or (3)
+ * OR
+ *  5B) freeConvolution(); // -> The End
  */
 
 #include <stdio.h>
@@ -50,11 +52,20 @@
 
 struct LV2convolv {
   Convproc *convproc;
-  char *ir_fn;
-  unsigned int ir_chan[MAX_AUDIO_CHANNELS];
-  unsigned int ir_delay[MAX_AUDIO_CHANNELS];
-  float ir_gain[MAX_AUDIO_CHANNELS];
-  int fragment_size;
+
+  /* IR file */
+  char *ir_fn; ///< path to IR file
+  unsigned int ir_chan[MAX_AUDIO_CHANNELS]; ///< channel map: ir_chan[out-channel] = file-channel; out-channel: 0..N-1, file-channel: 1..M
+  unsigned int ir_delay[MAX_AUDIO_CHANNELS]; ///< delay for each out-chanel; out-channel: 0..N-1, value >=0
+  float ir_gain[MAX_AUDIO_CHANNELS]; ///< IR-gain for each out-channel; out-channel: 0..N-1, value: float -inf..+inf
+
+  /* convolution settings*/
+  unsigned int size; ///< max length of convolution computation
+  float density; ///< density; 0<= dens <= 1.0 ; '0' = auto (1.0 / min(inchn,outchn)
+
+  /* process settings */
+  int fragment_size; ///< process period-size
+
 };
 
 
@@ -153,13 +164,21 @@ LV2convolv *allocConvolution() {
   clv->ir_delay[0]  = clv->ir_delay[1] = 0;
   clv->ir_gain[0] = clv->ir_gain[1] = 0.5;
   clv->ir_fn = NULL;
+
+  clv->density = 0.0;
+  clv->size = 204800;
 }
 
-void freeConvolution (LV2convolv *clv) {
+void releaseConvolution (LV2convolv *clv) {
   if (clv->convproc) {
     clv->convproc->stop_process ();
     delete(clv->convproc);
   }
+  clv->convproc = NULL;
+}
+
+void freeConvolution (LV2convolv *clv) {
+  releaseConvolution(clv);
   if (clv->ir_fn) {
     free(clv->ir_fn);
   }
@@ -187,6 +206,11 @@ int configConvolution (LV2convolv *clv, const char *key, const char *value) {
       if ((0 < n) && (n <= MAX_AUDIO_CHANNELS))
 	clv->ir_delay[n-1] = atoi(value);
     }
+  } else if (strcasecmp (key, (char*)"convolution.size") == 0) {
+    clv->size = atoi(value);
+    if (clv->size > 0x00100000) {
+      clv->size = 0x00100000;
+    }
   } else {
     return 0;
   }
@@ -205,8 +229,6 @@ int initConvolution (
   unsigned int i,c;
 
   /* zita-conv settings */
-  const float dens = 0; /* 0<= dens <= 1.0 ; '0' = auto (1.0 / min(inchn,outchn) */
-  const unsigned int size = 204800;
   const unsigned int options = 0;
 
   /* IR file */
@@ -222,6 +244,11 @@ int initConvolution (
     return -1;
   }
 
+  if (clv->convproc) {
+    fprintf (stderr, "convoLV2: already initialized.\n");
+    return (-1);
+  }
+
   if (!clv->ir_fn) {
     fprintf (stderr, "convoLV2: No IR file was configured.\n");
     return -1;
@@ -234,12 +261,12 @@ int initConvolution (
 
   clv->convproc = new Convproc;
   clv->convproc->set_options (options);
-  clv->convproc->set_density (dens);
+  clv->convproc->set_density (clv->density);
 
   if (clv->convproc->configure (
 	/*in*/  channels,
 	/*out*/ channels,
-	/*max-convolution length */ size, //< TODO make configurable, must be <= 0x00100000
+	/*max-convolution length */ clv->size,
 	/*fragm*/    buffersize,
 	/*min-part*/ buffersize /* must be >= fragm */,
 	/*max-part*/ buffersize /* Convproc::MAXPART -> stich output every period */
@@ -252,8 +279,6 @@ int initConvolution (
     fprintf(stderr, "convoLV2: failed to read IR.\n");
     return -1;
   }
-
-  free(clv->ir_fn); clv->ir_fn=NULL;
 
   gb = (float*) malloc(nfram*sizeof(float));
   if (!gb) {
@@ -304,6 +329,10 @@ void copy_input_to_output(const float * const * inbuf, float * const * outbuf, s
  */
 int convolve (LV2convolv *clv, const float * const * inbuf, float * const * outbuf, size_t n_channels, size_t n_samples) {
   unsigned int i,c;
+
+  if (!clv || !clv->convproc) {
+    return (0);
+  }
 
   if (clv->convproc->state () == Convproc::ST_WAIT) clv->convproc->check_stop ();
 
