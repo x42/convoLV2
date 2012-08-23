@@ -267,7 +267,7 @@ int initConvolution (
 	/*in*/  channels,
 	/*out*/ channels,
 	/*max-convolution length */ clv->size,
-	/*fragm*/    buffersize,
+	/*quantum*/  buffersize,
 	/*min-part*/ buffersize /* must be >= fragm */,
 	/*max-part*/ buffersize /* Convproc::MAXPART -> stich output every period */
 	)) {
@@ -309,8 +309,7 @@ int initConvolution (
   clv->convproc->print (stderr);
 #endif
 
-  /* this launches the zita-convolver thread */
-  if (clv->convproc->start_process (sched_priority, sched_policy)) {
+  if (clv->convproc->start_process (0, 0)) {
     fprintf(stderr, "convoLV2: Cannot start processing.\n");
     return -1;
   }
@@ -361,10 +360,6 @@ int convolve (LV2convolv *clv, const float * const * inbuf, float * const * outb
   }
 #endif
 
-  /* use process(true) in freewheeling/async mode,
-   * in which case process() will wait (block)
-   * until the convolution has completed.
-   */
   int f = clv->convproc->process (false);
 
   if (f /*&Convproc::FL_LOAD)*/ ) {

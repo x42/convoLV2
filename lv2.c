@@ -43,9 +43,6 @@ instantiate(const LV2_Descriptor*     descriptor,
             const char*               bundle_path,
             const LV2_Feature* const* features)
 {
-  int sched_pol= 0;
-  int sched_pri =0;
-
   convoLV2* clv = (convoLV2*)calloc(1, sizeof(convoLV2));
   if(!clv) { return NULL ;}
 
@@ -71,17 +68,9 @@ instantiate(const LV2_Descriptor*     descriptor,
   configConvolution(clv->instance, "convolution.ir.delay.1", "0");
 #endif
 
-#if 0
-  /* scheduler priority of zita-convolution thread */
-  struct sched_param s_param;
-  pthread_getschedparam(jack_client_thread_id(j_client), &s_policy, &s_param); // XXX TODO get LV2 thread priority
-  sched_pri = s_param.sched_priority;
-#endif
-
   if (initConvolution(clv->instance, rate,
 	/*num channels*/ 1,
-	/*64 <= buffer-size <=4096*/ 1024,
-	sched_pri, sched_pol))
+	/*64 <= buffer-size <=4096*/ 1024))
   {
     freeConvolution(clv->instance);
     free(clv);
