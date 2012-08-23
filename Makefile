@@ -9,7 +9,7 @@ LIB_EXT=.so
 LV2NAME=convoLV2
 
 ifeq ($(shell pkg-config --exists lv2 lv2core || echo no), no)
-	$(error "LV2 SDK was not found")
+  $(error "LV2 SDK was not found")
 endif
 
 ifeq ($(shell pkg-config --exists sndfile \
@@ -31,11 +31,12 @@ manifest.ttl: manifest.ttl.in
 	sed "s/@LV2NAME@/$(LV2NAME)/;s/@LIB_EXT@/$(LIB_EXT)/" manifest.ttl.in > manifest.ttl
 
 $(LV2NAME)$(LIB_EXT): lv2.c convolution.o
-	$(CC) -o $(LV2NAME)$(LIB_EXT) $(CFLAGS) $(LDFLAGS) $(LOADLIBES) -shared -Wl,-Bstatic -Wl,-Bdynamic lv2.c convolution.o
+	$(CC) -o $(LV2NAME)$(LIB_EXT) $(CFLAGS) $(LDFLAGS) $(LOADLIBES) \
+	  -shared -Wl,-Bstatic -Wl,-Bdynamic lv2.c convolution.o
 
 %.o: %.cc %.h
 
-install: lv2
+install: manifest.ttl $(LV2NAME)$(LIB_EXT)
 	install -d $(DESTDIR)$(lv2dir)/$(LV2NAME)
 	install -m755 $(LV2NAME)$(LIB_EXT) $(DESTDIR)$(lv2dir)/$(LV2NAME)
 	install -m644 manifest.ttl $(LV2NAME).ttl $(DESTDIR)$(lv2dir)/$(LV2NAME)
