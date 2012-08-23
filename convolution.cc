@@ -302,26 +302,22 @@ void copy_input_to_output(const float * const * inbuf, float * const * outbuf, s
 /*
  *
  */
-void convolve (LV2convolv *clv, const float * const * inbuf, float * const * outbuf, size_t n_channels, size_t n_samples) {
+int convolve (LV2convolv *clv, const float * const * inbuf, float * const * outbuf, size_t n_channels, size_t n_samples) {
   unsigned int i,c;
 
   if (clv->convproc->state () == Convproc::ST_WAIT) clv->convproc->check_stop ();
 
   if (clv->fragment_size != n_samples) {
-    // XXX fail -> reconfiguration is needed
-    fprintf(stderr, "fragment size mismatch -> reconfiguration is needed\n");
-    return;
+    return (-1);
   }
 
   if (n_channels > MAX_AUDIO_CHANNELS) {
-    // XXX fail -> reconfiguration is needed
-    fprintf(stderr, "channel count mismatch -> reconfiguration is needed\n");
-    return;
+    return (-2);
   }
 
   if (clv->convproc->state () != Convproc::ST_PROC) {
     copy_input_to_output(inbuf, outbuf, n_channels, n_samples);
-    return;
+    return (n_samples);
   }
 
   for (c = 0; c < n_channels; ++c)
@@ -344,11 +340,13 @@ void convolve (LV2convolv *clv, const float * const * inbuf, float * const * out
 
   if (f /*&Convproc::FL_LOAD)*/ ) {
     copy_input_to_output(inbuf, outbuf, n_channels, n_samples);
-    return;
+    return (n_samples);
   }
 
   for (c = 0; c < n_channels; ++c)
     memcpy (outbuf[c], clv->convproc->outdata (c), n_samples * sizeof (float));
+
+  return (n_samples);
 }
 
 /* vi:set ts=8 sts=2 sw=2: */

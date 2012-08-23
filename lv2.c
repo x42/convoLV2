@@ -17,6 +17,7 @@
  * Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  
  */
 
+#include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -116,13 +117,22 @@ static void
 run(LV2_Handle instance, uint32_t n_samples)
 {
   convoLV2* clv = (convoLV2*)instance;
+  int rv;
 
   const float *input[MAX_AUDIO_CHANNELS];
   float *output[MAX_AUDIO_CHANNELS];
   input[0] = clv->input;
   output[0] = clv->output;
 
-  convolve(clv->instance, input, output, /*num channels*/1, n_samples);
+  rv = convolve(clv->instance, input, output, /*num channels*/1, n_samples);
+
+  if (rv<0) {
+    // TODO - trigger re-init
+    if (rv==-1)
+      fprintf(stderr, "fragment size mismatch -> reconfiguration is needed\n"); // XXX non RT
+    else /* -2 */
+      fprintf(stderr, "channel count mismatch -> reconfiguration is needed\n"); // XXX non RT
+  }
 }
 
 static void

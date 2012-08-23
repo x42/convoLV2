@@ -37,7 +37,7 @@ extern void freeConvolution (LV2convolv *clv);
 int configConvolution (LV2convolv *clv, const char *key, const char *value);
 extern int initConvolution (LV2convolv *clv, const unsigned int sample_rate, const unsigned int channels, const unsigned int buffersize, int sched_priority, int sched_policy);
 
-extern void convolve (LV2convolv *clv, const float * const * inbuf, float * const* outbuf, size_t n_channels, size_t n_samples);
+extern int convolve (LV2convolv *clv, const float * const * inbuf, float * const* outbuf, size_t n_channels, size_t n_samples);
 
 #ifdef __cplusplus
 }
