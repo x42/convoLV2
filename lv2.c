@@ -50,11 +50,13 @@ instantiate(const LV2_Descriptor*     descriptor,
     return NULL;
   }
 
-  unsigned int bufsiz = 1024; // XXX
-
   configConvolution(clv->instance, "convolution.ir.file", "/tmp/example_ir-48k.wav");
 
-  if (initConvolution(clv->instance, rate, 1, bufsiz, 0, 0)) {
+  if (initConvolution(clv->instance, rate,
+	/*num channels*/ 1,
+	/*buffer-size*/ 1024,
+	/*sched priority*/ 0, /*shed policy*/ 0))
+  {
     freeConvolution(clv->instance);
     free(clv);
     return NULL;
@@ -93,10 +95,9 @@ run(LV2_Handle instance, uint32_t n_samples)
   const float *input[MAX_AUDIO_CHANNELS];
   float *output[MAX_AUDIO_CHANNELS];
   input[0] = clv->input;
-  input[1] = clv->input;
   output[0] = clv->output;
 
-  convolve(clv->instance, input, output, 1, n_samples);
+  convolve(clv->instance, input, output, /*num channels*/1, n_samples);
 }
 
 static void

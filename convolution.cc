@@ -30,13 +30,11 @@
 #include <sndfile.h>
 
 struct LV2convolv {
-	double SampleRateD;
-	Convproc *convproc;
-
-	char *ir_fn;
-	unsigned int ir_chan[MAX_AUDIO_CHANNELS];
-	unsigned int ir_delay[MAX_AUDIO_CHANNELS];
-	float ir_gain[MAX_AUDIO_CHANNELS];
+  Convproc *convproc;
+  char *ir_fn;
+  unsigned int ir_chan[MAX_AUDIO_CHANNELS];
+  unsigned int ir_delay[MAX_AUDIO_CHANNELS];
+  float ir_gain[MAX_AUDIO_CHANNELS];
 };
 
 
@@ -51,7 +49,7 @@ struct LV2convolv {
 /** read an audio-file completely into memory
  * allocated memory needs to be free()ed by caller
  */
-int audiofile_read (const char *fn, int sample_rate, float **buf, unsigned int *n_ch, unsigned int *n_sp) {
+int audiofile_read (const char *fn, const int sample_rate, float **buf, unsigned int *n_ch, unsigned int *n_sp) {
   SF_INFO nfo;
   SNDFILE  *sndfile;
   int ok = -2;
@@ -145,13 +143,17 @@ int initConvolution (
     int sched_policy)
 {
   unsigned int i,c;
+
+  /* zita-conv settings */
   const float dens = 0;
   const unsigned int size = 204800;
   const unsigned int options = 0;
 
+  /* IR file */
   unsigned int nchan = 0;
   unsigned int nfram = 0;
-  float *p = NULL;
+  float *p = NULL; /* temp. IR file buffer */
+  float *gb; /* temp. gain-scaled IR file buffer */
 
   if (zita_convolver_major_version () != ZITA_CONVOLVER_MAJOR_VERSION) {
     fprintf (stderr, "convoLV2: Zita-convolver version does not match.\n");
@@ -191,7 +193,7 @@ int initConvolution (
 
   free(clv->ir_fn); clv->ir_fn=NULL;
 
-  float *gb = (float*) malloc(nfram*sizeof(float));
+  gb = (float*) malloc(nfram*sizeof(float));
   if (!gb) {
     fprintf (stderr, "convoLV2: memory allocation failed for convolution buffer.\n");
     return -1;
