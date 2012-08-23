@@ -26,8 +26,8 @@
 #include <stdint.h>
 
 #include <zita-convolver.h>
-#include "convolution.h"
 #include <sndfile.h>
+#include "convolution.h"
 
 struct LV2convolv {
   Convproc *convproc;
@@ -42,9 +42,7 @@ struct LV2convolv {
 #error "This programs requires zita-convolver 3.x.x"
 #endif
 
-#define _S (char*)
 #define DENORMAL_HACK (1e-20)
-
 
 /** read an audio-file completely into memory
  * allocated memory needs to be free()ed by caller
@@ -109,21 +107,21 @@ void freeConvolution (LV2convolv *clv) {
 int configConvolution (LV2convolv *clv, const char *key, const char *value) {
   double d;
   int n;
-  if (strcasecmp (key, _S"convolution.ir.file") == 0) {
+  if (strcasecmp (key, (char*)"convolution.ir.file") == 0) {
     free(clv->ir_fn);
     clv->ir_fn = strdup(value);
-  } else if (!strncasecmp (key, _S"convolution.ir.channel.", 23)) {
-    if (sscanf (key, _S"convolution.ir.channel.%d", &n) == 1) {
+  } else if (!strncasecmp (key, (char*)"convolution.ir.channel.", 23)) {
+    if (sscanf (key, (char*)"convolution.ir.channel.%d", &n) == 1) {
       if ((0 < n) && (n <= MAX_AUDIO_CHANNELS))
 	clv->ir_chan[n-1] = atoi(value);
     }
-  } else if (!strncasecmp (key, _S"convolution.ir.gain.", 20)) {
-    if (sscanf (key, _S"convolution.ir.gain.%d", &n) == 1) {
+  } else if (!strncasecmp (key, (char*)"convolution.ir.gain.", 20)) {
+    if (sscanf (key, (char*)"convolution.ir.gain.%d", &n) == 1) {
       if ((0 < n) && (n <= MAX_AUDIO_CHANNELS))
 	clv->ir_gain[n-1] = atof(value);
     }
-  } else if (!strncasecmp (key, _S"convolution.ir.delay.", 21)) {
-    if (sscanf (key, _S"convolution.ir.delay.%d", &n) == 1) {
+  } else if (!strncasecmp (key, (char*)"convolution.ir.delay.", 21)) {
+    if (sscanf (key, (char*)"convolution.ir.delay.%d", &n) == 1) {
       if ((0 < n) && (n <= MAX_AUDIO_CHANNELS))
 	clv->ir_delay[n-1] = atoi(value);
     }
