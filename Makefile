@@ -14,6 +14,7 @@ LIB_EXT=.so
 lv2dir = $(PREFIX)/lib/lv2
 LOADLIBES=-lm
 LV2NAME=convoLV2
+CFLAGS+=-fPIC -std=c99
 
 # check for build-dependencies
 ifeq ($(shell pkg-config --exists lv2 lv2core || echo no), no)
@@ -25,7 +26,6 @@ ifeq ($(shell pkg-config --exists sndfile samplerate\
         && echo yes), yes)
   CFLAGS+=`pkg-config --cflags sndfile samplerate`
   LOADLIBES+=-lzita-convolver `pkg-config --libs sndfile samplerate`
-  BXCC=$(CXX)
 else
   $(error "libzita-convolver3, libsndfile and libsamplerate are required")
 endif
