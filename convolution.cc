@@ -54,6 +54,7 @@ struct LV2convolv {
   unsigned int ir_chan[MAX_AUDIO_CHANNELS];
   unsigned int ir_delay[MAX_AUDIO_CHANNELS];
   float ir_gain[MAX_AUDIO_CHANNELS];
+  int fragment_size;
 };
 
 
@@ -214,9 +215,11 @@ int initConvolution (
   float *p = NULL; /* temp. IR file buffer */
   float *gb; /* temp. gain-scaled IR file buffer */
 
+  clv->fragment_size = buffersize;
+
   if (zita_convolver_major_version () != ZITA_CONVOLVER_MAJOR_VERSION) {
     fprintf (stderr, "convoLV2: Zita-convolver version does not match.\n");
-    exit(1);
+    return -1;
   }
 
   if (!clv->ir_fn) {
@@ -304,8 +307,15 @@ void convolve (LV2convolv *clv, const float * const * inbuf, float * const * out
 
   if (clv->convproc->state () == Convproc::ST_WAIT) clv->convproc->check_stop ();
 
+  if (clv->fragment_size != n_samples) {
+    // XXX fail -> reconfiguration is needed
+    fprintf(stderr, "fragment size mismatch -> reconfiguration is needed\n");
+    return;
+  }
+
   if (n_channels > MAX_AUDIO_CHANNELS) {
-    // XXX fail
+    // XXX fail -> reconfiguration is needed
+    fprintf(stderr, "channel count mismatch -> reconfiguration is needed\n");
     return;
   }
 
