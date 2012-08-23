@@ -24,6 +24,7 @@
 #include "convolution.h"
 
 #include "lv2/lv2plug.in/ns/lv2core/lv2.h"
+#include "lv2/lv2plug.in/ns/ext/worker/worker.h"
 
 typedef enum {
   P_INPUT      = 0,
@@ -31,10 +32,16 @@ typedef enum {
 } PortIndex;
 
 typedef struct {
+  LV2_Worker_Schedule* schedule;
+
   float* input;
   float* output;
 
-  struct LV2convolv *instance;
+  LV2convolv *instance;
+  int bufsize;
+  int rate;
+  int reinit_in_progress;
+
 } convoLV2;
 
 static LV2_Handle
@@ -43,13 +50,31 @@ instantiate(const LV2_Descriptor*     descriptor,
             const char*               bundle_path,
             const LV2_Feature* const* features)
 {
+  int i;
   convoLV2* clv = (convoLV2*)calloc(1, sizeof(convoLV2));
   if(!clv) { return NULL ;}
+
+  for (i = 0; features[i]; ++i) {
+    if (!strcmp(features[i]->URI, LV2_WORKER__schedule)) {
+      clv->schedule = (LV2_Worker_Schedule*)features[i]->data;
+    }
+  }
+
+  if (!clv->schedule) {
+    fprintf(stderr, "Missing feature work:schedule.\n");
+    free(clv);
+    return NULL;
+  }
 
   if (!(clv->instance = allocConvolution())) {
     free(clv);
     return NULL;
   }
+
+  clv->bufsize = 1024;
+  clv->bufsize = 1; // XXX force re-init
+  clv->rate = rate;
+  clv->reinit_in_progress = 0;
 
   /* setting an IR file is required */
   configConvolution(clv->instance, "convolution.ir.file", "/tmp/example_ir-48k.wav");
@@ -68,9 +93,9 @@ instantiate(const LV2_Descriptor*     descriptor,
   configConvolution(clv->instance, "convolution.ir.delay.1", "0");
 #endif
 
-  if (initConvolution(clv->instance, rate,
+  if (initConvolution(clv->instance, clv->rate,
 	/*num channels*/ 1,
-	/*64 <= buffer-size <=4096*/ 1024))
+	/*64 <= buffer-size <=4096*/ clv->bufsize))
   {
     freeConvolution(clv->instance);
     free(clv);
@@ -79,6 +104,59 @@ instantiate(const LV2_Descriptor*     descriptor,
 
   return (LV2_Handle)clv;
 }
+
+
+/*
+   Do work in a non-realtime thread.
+
+   This is called for every piece of work scheduled in the audio thread using
+   self->schedule->schedule_work().  A reply can be sent back to the audio
+   thread using the provided respond function.
+*/
+static LV2_Worker_Status
+work(LV2_Handle                  instance,
+     LV2_Worker_Respond_Function respond,
+     LV2_Worker_Respond_Handle   handle,
+     uint32_t                    size,
+     const void*                 data)
+{
+  convoLV2* clv = (convoLV2*)instance;
+
+  LV2convolv *newinst = allocConvolution();
+  if (!newinst) {
+    clv->reinit_in_progress = 0;
+    return LV2_WORKER_ERR_NO_SPACE; // OOM
+  }
+
+  cloneConvolutionParams(instance, clv->instance);
+  if (initConvolution(instance, clv->rate,
+	/*num channels*/ 1,
+	/*64 <= buffer-size <=4096*/ clv->bufsize));
+
+  respond(handle, sizeof(LV2convolv*), instance);
+  return LV2_WORKER_SUCCESS;
+}
+
+/**
+   Handle a response from work() in the audio thread.
+
+   When running normally, this will be called by the host after run().  When
+   freewheeling, this will be called immediately at the point the work was
+   scheduled.
+*/
+static LV2_Worker_Status
+work_response(LV2_Handle  instance,
+              uint32_t    size,
+              const void* data)
+{
+  convoLV2* clv = (convoLV2*)instance;
+  LV2convolv *old = clv->instance;
+  clv->instance = (LV2convolv*) data;
+  freeConvolution(old);
+  clv->reinit_in_progress = 0;
+  return LV2_WORKER_SUCCESS;
+}
+
 
 static void
 connect_port(LV2_Handle instance,
@@ -106,21 +184,35 @@ static void
 run(LV2_Handle instance, uint32_t n_samples)
 {
   convoLV2* clv = (convoLV2*)instance;
-  int rv;
+  int rv = 0;
 
   const float *input[MAX_AUDIO_CHANNELS];
   float *output[MAX_AUDIO_CHANNELS];
   input[0] = clv->input;
   output[0] = clv->output;
 
+  if (clv->bufsize != n_samples) {
+    // re-initialize convolver
+    clv->bufsize = n_samples;
+    if (!clv->reinit_in_progress) {
+      clv->reinit_in_progress = 1;
+      clv->schedule->schedule_work(clv->schedule->handle, 0, NULL);
+      clv = (convoLV2*)instance;
+    }
+  }
+
   rv = convolve(clv->instance, input, output, /*num channels*/1, n_samples);
 
   if (rv<0) {
-    // TODO - trigger re-init
     if (rv==-1)
       fprintf(stderr, "fragment size mismatch -> reconfiguration is needed\n"); // XXX non RT
     else /* -2 */
       fprintf(stderr, "channel count mismatch -> reconfiguration is needed\n"); // XXX non RT
+
+    if (!clv->reinit_in_progress) {
+      clv->reinit_in_progress = 1;
+      clv->schedule->schedule_work(clv->schedule->handle, 0, NULL);
+    }
   }
 }
 
@@ -140,6 +232,10 @@ cleanup(LV2_Handle instance)
 const void*
 extension_data(const char* uri)
 {
+  static const LV2_Worker_Interface worker = { work, work_response, NULL };
+  if (!strcmp(uri, LV2_WORKER__interface)) {
+    return &worker;
+  }
   return NULL;
 }
 
