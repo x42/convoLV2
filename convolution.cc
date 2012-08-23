@@ -17,6 +17,20 @@
  * Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  
  */
 
+/* Usage information:
+ *
+ * Non-realtime, initialization:
+ * 1)  allocConvolution();
+ * 2)  configConvolution(); // can be called multiple times
+ * 3)  initConvolution();   // fix settings
+ *
+ * Realtime process
+ * 4)  convolve();
+ *
+ * Non-rt, cleanup
+ * 5) freeConvolution();
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -247,11 +261,11 @@ int initConvolution (
   for (c=0; c < MAX_AUDIO_CHANNELS, c < channels; c++) {
 
     if (clv->ir_chan[c] > nchan || clv->ir_chan[c] < 1) {
-      fprintf(stderr, "convoLV2: invalid channel in IR file. required: 1 <= %d <= %d\n", clv->ir_chan[c], nchan);
+      fprintf(stderr, "convoLV2: invalid channel in IR file; expected: 1 <= %d <= %d\n", clv->ir_chan[c], nchan);
       return -1;
     }
     if (clv->ir_delay[c] < 0) {
-      fprintf(stderr, "convoLV2: invalid delay. required: 0 <= %d\n", clv->ir_delay[c]);
+      fprintf(stderr, "convoLV2: invalid delay; expected: 0 <= %d\n", clv->ir_delay[c]);
       return -1;
     }
 
@@ -267,6 +281,7 @@ int initConvolution (
   clv->convproc->print (stderr);
 #endif
 
+  /* this launches the zita-convolver thread */
   if (clv->convproc->start_process (sched_priority, sched_policy)) {
     fprintf(stderr, "convoLV2: Cannot start processing.\n");
     return -1;
@@ -311,6 +326,10 @@ void convolve (LV2convolv *clv, const float * const * inbuf, float * const * out
   }
 #endif
 
+  /* use process(true) in freewheeling/async mode,
+   * in which case process() will wait (block)
+   * until the convolution has completed.
+   */
   int f = clv->convproc->process (false);
 
   if (f /*&Convproc::FL_LOAD)*/ ) {
