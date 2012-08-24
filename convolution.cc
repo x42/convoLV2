@@ -183,7 +183,7 @@ void releaseConvolution (LV2convolv *clv) {
 
 void cloneConvolutionParams(LV2convolv *clv_new, LV2convolv *clv) {
   memcpy(clv_new, clv, sizeof(LV2convolv));
-  clv->convproc = NULL;
+  clv_new->convproc = NULL;
   if (clv->ir_fn) {
     clv_new->ir_fn = strdup(clv->ir_fn);
   }
