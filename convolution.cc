@@ -64,7 +64,7 @@ struct LV2convolv {
   float density; ///< density; 0<= dens <= 1.0 ; '0' = auto (1.0 / min(inchn,outchn)
 
   /* process settings */
-  int fragment_size; ///< process period-size
+  unsigned int fragment_size; ///< process period-size
 
 };
 
@@ -132,7 +132,9 @@ int audiofile_read (const char *fn, const int sample_rate, float **buf, unsigned
     }
 
     if (resample_ratio != 1.0) {
-      fprintf(stderr, "convoLV2: resampling IR %ld -> %ld [frames * channels].\n", frames_in, frames_out);
+      fprintf(stderr, "convoLV2: resampling IR %ld -> %ld [frames * channels].\n",
+	  (long int) frames_in,
+	  (long int) frames_out);
       SRC_STATE* src_state = src_new(SRC_QUALITY, nfo.channels, NULL);
       SRC_DATA src_data;
 
@@ -171,6 +173,7 @@ LV2convolv *allocConvolution() {
 
   clv->density = 0.0;
   clv->size = 204800;
+  return clv;
 }
 
 void releaseConvolution (LV2convolv *clv) {
@@ -198,7 +201,6 @@ void freeConvolution (LV2convolv *clv) {
 }
 
 int configConvolution (LV2convolv *clv, const char *key, const char *value) {
-  double d;
   int n;
   if (strcasecmp (key, (char*)"convolution.ir.file") == 0) {
     free(clv->ir_fn);
@@ -297,7 +299,7 @@ int initConvolution (
     return -1;
   }
 
-  for (c=0; c < MAX_AUDIO_CHANNELS, c < channels; c++) {
+  for (c=0; c < MAX_AUDIO_CHANNELS && c < channels; c++) {
 
     if (clv->ir_chan[c] > nchan || clv->ir_chan[c] < 1) {
       fprintf(stderr, "convoLV2: invalid channel in IR file; expected: 1 <= %d <= %d\n", clv->ir_chan[c], nchan);
@@ -345,7 +347,7 @@ void silent_output(float * const * outbuf, size_t n_channels, size_t n_samples) 
 /*
  *
  */
-int convolve (LV2convolv *clv, const float * const * inbuf, float * const * outbuf, size_t n_channels, size_t n_samples) {
+int convolve (LV2convolv *clv, const float * const * inbuf, float * const * outbuf, const unsigned int n_channels, const unsigned int n_samples) {
   unsigned int i,c;
 
   if (!clv || !clv->convproc) {

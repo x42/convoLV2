@@ -39,7 +39,7 @@ extern int initConvolution (LV2convolv *clv, const unsigned int sample_rate, con
 extern void releaseConvolution (LV2convolv *clv);
 void cloneConvolutionParams(LV2convolv *clv_new, LV2convolv *clv);
 
-extern int convolve (LV2convolv *clv, const float * const * inbuf, float * const* outbuf, size_t n_channels, size_t n_samples);
+extern int convolve (LV2convolv *clv, const float * const * inbuf, float * const* outbuf, const unsigned int n_channels, const unsigned int n_samples);
 
 #ifdef __cplusplus
 }

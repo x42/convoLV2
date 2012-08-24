@@ -14,7 +14,8 @@ LIB_EXT=.so
 lv2dir = $(PREFIX)/lib/lv2
 LOADLIBES=-lm
 LV2NAME=convoLV2
-CFLAGS+=-fPIC -std=c99
+CFLAGS+=-fPIC
+CXXFLAGS=$(CFLAGS)
 
 # check for build-dependencies
 ifeq ($(shell pkg-config --exists lv2 lv2core || echo no), no)
