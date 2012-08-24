@@ -32,7 +32,7 @@ typedef enum {
 } PortIndex;
 
 typedef struct {
-  LV2_Worker_Schedule* schedule;
+  LV2_Worker_Schedule *schedule;
 
   float* input;
   float* output;
@@ -72,7 +72,6 @@ instantiate(const LV2_Descriptor*     descriptor,
   }
 
   clv->bufsize = 1024;
-  clv->bufsize = 4096; // XXX force re-init
   clv->rate = rate;
   clv->reinit_in_progress = 0;
 
@@ -121,19 +120,19 @@ work(LV2_Handle                  instance,
      const void*                 data)
 {
   convoLV2* clv = (convoLV2*)instance;
-
   LV2convolv *newinst = allocConvolution();
+
   if (!newinst) {
     clv->reinit_in_progress = 0;
     return LV2_WORKER_ERR_NO_SPACE; // OOM
   }
 
-  cloneConvolutionParams(instance, clv->instance);
-  if (initConvolution(instance, clv->rate,
+  cloneConvolutionParams(newinst, clv->instance);
+  if (initConvolution(newinst, clv->rate,
 	/*num channels*/ 1,
 	/*64 <= buffer-size <=4096*/ clv->bufsize));
 
-  respond(handle, sizeof(LV2convolv*), instance);
+  respond(handle, sizeof(newinst), &newinst);
   return LV2_WORKER_SUCCESS;
 }
 
@@ -151,7 +150,7 @@ work_response(LV2_Handle  instance,
 {
   convoLV2* clv = (convoLV2*)instance;
   LV2convolv *old = clv->instance;
-  clv->instance = (LV2convolv*) data;
+  clv->instance = *(LV2convolv*const*) data;
   freeConvolution(old);
   clv->reinit_in_progress = 0;
   return LV2_WORKER_SUCCESS;
@@ -204,11 +203,12 @@ run(LV2_Handle instance, uint32_t n_samples)
   rv = convolve(clv->instance, input, output, /*num channels*/1, n_samples);
 
   if (rv<0) {
+#if 0 // DEBUG
     if (rv==-1)
       fprintf(stderr, "fragment size mismatch -> reconfiguration is needed\n"); // XXX non RT
     else /* -2 */
       fprintf(stderr, "channel count mismatch -> reconfiguration is needed\n"); // XXX non RT
-
+#endif
     if (!clv->reinit_in_progress) {
       clv->reinit_in_progress = 1;
       clv->schedule->schedule_work(clv->schedule->handle, 0, NULL);

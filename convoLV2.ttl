@@ -3,6 +3,7 @@
 @prefix lv2: <http://lv2plug.in/ns/lv2core#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix work:  <http://lv2plug.in/ns/ext/worker#> .
 
 <http://gareus.org/>
 	a foaf:Person ;
@@ -15,6 +16,8 @@
 	doap:maintainer <http://gareus.org/> ;
 	doap:name "Simple Convolution Plugin";
 	doap:license <http://usefulinc.com/doap/licenses/gpl> ;
+	lv2:requiredFeature work:schedule ;
+	lv2:extensionData work:interface ;
 	lv2:optionalFeature lv2:hardRTCapable ;
 	lv2:port
 	[
