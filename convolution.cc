@@ -177,6 +177,7 @@ LV2convolv *allocConvolution() {
 }
 
 void releaseConvolution (LV2convolv *clv) {
+  if (!clv) return;
   if (clv->convproc) {
     clv->convproc->stop_process ();
     delete(clv->convproc);
@@ -185,6 +186,7 @@ void releaseConvolution (LV2convolv *clv) {
 }
 
 void cloneConvolutionParams(LV2convolv *clv_new, LV2convolv *clv) {
+  if (!clv) return;
   memcpy(clv_new, clv, sizeof(LV2convolv));
   clv_new->convproc = NULL;
   if (clv->ir_fn) {
@@ -193,6 +195,7 @@ void cloneConvolutionParams(LV2convolv *clv_new, LV2convolv *clv) {
 }
 
 void freeConvolution (LV2convolv *clv) {
+  if (!clv) return;
   releaseConvolution(clv);
   if (clv->ir_fn) {
     free(clv->ir_fn);
@@ -368,7 +371,7 @@ int convolve (LV2convolv *clv, const float * const * inbuf, float * const * outb
 
   if (clv->convproc->state () != Convproc::ST_PROC) {
     /* Note this will actually never happen in sync-mode */
-    fprintf(stderr, "fons br0ke libzita-resampler.\n");
+    fprintf(stderr, "fons br0ke libzita-resampler :)\n");
     copy_input_to_output(inbuf, outbuf, n_channels, n_samples);
     return (n_samples);
   }
@@ -389,7 +392,7 @@ int convolve (LV2convolv *clv, const float * const * inbuf, float * const * outb
 
   if (f /*&Convproc::FL_LOAD)*/ ) {
     /* Note this will actually never happen in sync-mode */
-    fprintf(stderr, "fons br0ke libzita-resampler.\n");
+    fprintf(stderr, "fons br0ke libzita-resampler :).\n");
     copy_input_to_output(inbuf, outbuf, n_channels, n_samples);
     return (n_samples);
   }
