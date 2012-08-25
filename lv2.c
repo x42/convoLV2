@@ -52,6 +52,7 @@ typedef struct {
   ConvoLV2URIs uris;
 
   LV2convolv *instance;
+  LV2convolv *new_inst;
   int bufsize;
   int rate;
   int reinit_in_progress;
@@ -92,52 +93,16 @@ instantiate(const LV2_Descriptor*     descriptor,
   map_convolv2_uris(clv->map, &clv->uris);
   lv2_atom_forge_init(&clv->forge, clv->map);
 
-  if (!(clv->instance = allocConvolution())) {
-    free(clv);
-    return NULL;
-  }
-
   clv->bufsize = 1024;
   clv->rate = rate;
   clv->reinit_in_progress = 0;
-
-  /* setting an IR file is required */
-  configConvolution(clv->instance, "convolution.ir.file", "/tmp/example_ir-48k.wav");
-
-#if 0 // config examples
-  /* use channel 2 of IR file for channel 1 of convolution
-   * channel count = 1..n
-   */
-  configConvolution(clv->instance, "convolution.ir.channel.1", "2");
-
-  /* apply GAIN factor of 0.5 to the IR-sample used for channel 1 */
-  configConvolution(clv->instance, "convolution.ir.gain.1", "0.5");
-
-  /* offset the IR sample used for channel 1
-   * value must be >= 0 */
-  configConvolution(clv->instance, "convolution.ir.delay.1", "0");
-#endif
-
-  if (initConvolution(clv->instance, clv->rate,
-	/*num channels*/ 1,
-	/*64 <= buffer-size <=4096*/ clv->bufsize))
-  {
-    freeConvolution(clv->instance);
-    free(clv);
-    return NULL;
-  }
+  clv->instance = NULL;
+  clv->new_inst = NULL;
 
   return (LV2_Handle)clv;
 }
 
 
-/*
-   Do work in a non-realtime thread.
-
-   This is called for every piece of work scheduled in the audio thread using
-   self->schedule->schedule_work().  A reply can be sent back to the audio
-   thread using the provided respond function.
-*/
 static LV2_Worker_Status
 work(LV2_Handle                  instance,
      LV2_Worker_Respond_Function respond,
@@ -146,29 +111,44 @@ work(LV2_Handle                  instance,
      const void*                 data)
 {
   convoLV2* clv = (convoLV2*)instance;
-  LV2convolv *newinst = allocConvolution();
+  if (size == 0) {
 
-  if (!newinst) {
-    clv->reinit_in_progress = 0;
-    return LV2_WORKER_ERR_NO_SPACE; // OOM
+    if (!clv->new_inst) {
+      clv->new_inst = allocConvolution();
+    }
+    if (!clv->new_inst) {
+      clv->reinit_in_progress = 0;
+      return LV2_WORKER_ERR_NO_SPACE; // OOM
+    }
+
+    cloneConvolutionParams(clv->new_inst, clv->instance);
+    if (initConvolution(clv->new_inst, clv->rate,
+	  /*num channels*/ 1,
+	  /*64 <= buffer-size <=4096*/ clv->bufsize));
+
+    respond(handle, sizeof(clv->new_inst), &clv->new_inst);
+  } else {
+    const LV2_Atom_Object* obj = (const LV2_Atom_Object*) data;
+    const LV2_Atom* file_path = read_set_file(&clv->uris, obj);
+    const char *fn = (char*)(file_path+1);
+    //const char *fn = LV2_ATOM_BODY_CONST(file_path);
+    fprintf(stderr, "load %s\n", fn);
+
+    if (!clv->new_inst) {
+      clv->new_inst = allocConvolution();
+
+      if (!clv->new_inst) {
+	clv->reinit_in_progress = 0;
+	return LV2_WORKER_ERR_NO_SPACE; // OOM
+      }
+      cloneConvolutionParams(clv->new_inst, clv->instance);
+    }
+    configConvolution(clv->new_inst, "convolution.ir.file", fn);
+    respond(handle, sizeof(clv->new_inst), &clv->new_inst);
   }
-
-  cloneConvolutionParams(newinst, clv->instance);
-  if (initConvolution(newinst, clv->rate,
-	/*num channels*/ 1,
-	/*64 <= buffer-size <=4096*/ clv->bufsize));
-
-  respond(handle, sizeof(newinst), &newinst);
   return LV2_WORKER_SUCCESS;
 }
 
-/**
-   Handle a response from work() in the audio thread.
-
-   When running normally, this will be called by the host after run().  When
-   freewheeling, this will be called immediately at the point the work was
-   scheduled.
-*/
 static LV2_Worker_Status
 work_response(LV2_Handle  instance,
               uint32_t    size,
@@ -176,8 +156,9 @@ work_response(LV2_Handle  instance,
 {
   convoLV2* clv = (convoLV2*)instance;
   LV2convolv *old = clv->instance;
-  clv->instance = *(LV2convolv*const*) data;
+  clv->instance = *(LV2convolv*const*) data; // == clv->newinst
   freeConvolution(old);
+  clv->new_inst = NULL;
   clv->reinit_in_progress = 0;
   return LV2_WORKER_SUCCESS;
 }
@@ -207,12 +188,10 @@ connect_port(LV2_Handle instance,
 }
 
 static void
-static void
 run(LV2_Handle instance, uint32_t n_samples)
 {
   convoLV2* clv = (convoLV2*)instance;
   ConvoLV2URIs* uris = &clv->uris;
-  int rv = 0;
 
   const float *input[MAX_AUDIO_CHANNELS];
   float *output[MAX_AUDIO_CHANNELS];
@@ -234,8 +213,8 @@ run(LV2_Handle instance, uint32_t n_samples)
     if (is_object_type(uris, ev->body.type)) {
       const LV2_Atom_Object* obj = (LV2_Atom_Object*)&ev->body;
       if (obj->body.otype == uris->patch_Set) {
-	//clv->schedule->schedule_work(clv->schedule->handle, lv2_atom_total_size(&ev->body), &ev->body);
-#if 1 // TODO this is not RT-save -> worker
+	clv->schedule->schedule_work(clv->schedule->handle, lv2_atom_total_size(&ev->body), &ev->body);
+#if 0 // TODO this is not RT-save -> worker
 	const LV2_Atom_Object* obj = (const LV2_Atom_Object*) &ev->body;
 	const LV2_Atom* file_path = read_set_file(&clv->uris, obj);
 	const char *fn = (char*)(file_path+1);
@@ -252,26 +231,17 @@ run(LV2_Handle instance, uint32_t n_samples)
 
   if (clv->bufsize != n_samples) {
     // re-initialize convolver
-    clv->bufsize = n_samples;
+    if (n_samples < 64 || n_samples > 4096 ||
+	/* not power of two */ (n_samples & (n_samples - 1))
+	) {
+      // silence ??
+      return;
+    }
     if (!clv->reinit_in_progress) {
       clv->reinit_in_progress = 1;
+      clv->bufsize = n_samples;
       clv->schedule->schedule_work(clv->schedule->handle, 0, NULL);
       clv = (convoLV2*)instance;
-    }
-  }
-
-  rv = convolve(clv->instance, input, output, /*num channels*/1, n_samples);
-
-  if (rv<0) {
-#if 0 // DEBUG
-    if (rv==-1)
-      fprintf(stderr, "fragment size mismatch -> reconfiguration is needed\n"); // XXX non RT
-    else /* -2 */
-      fprintf(stderr, "channel count mismatch -> reconfiguration is needed\n"); // XXX non RT
-#endif
-    if (!clv->reinit_in_progress) {
-      clv->reinit_in_progress = 1;
-      clv->schedule->schedule_work(clv->schedule->handle, 0, NULL);
     }
   }
 
