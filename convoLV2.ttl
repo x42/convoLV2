@@ -1,9 +1,10 @@
+@prefix atom: <http://lv2plug.in/ns/ext/atom#> .
 @prefix doap: <http://usefulinc.com/ns/doap#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
-@prefix lv2: <http://lv2plug.in/ns/lv2core#> .
-@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
-@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix work:  <http://lv2plug.in/ns/ext/worker#> .
+@prefix lv2:  <http://lv2plug.in/ns/lv2core#> .
+@prefix ui:   <http://lv2plug.in/ns/extensions/ui#> .
+@prefix urid:  <http://lv2plug.in/ns/ext/urid#> . 
+@prefix work: <http://lv2plug.in/ns/ext/worker#> .
 
 <http://gareus.org/>
 	a foaf:Person ;
@@ -16,9 +17,10 @@
 	doap:maintainer <http://gareus.org/> ;
 	doap:name "Simple Convolution Plugin";
 	doap:license <http://usefulinc.com/doap/licenses/gpl> ;
-	lv2:requiredFeature work:schedule ;
+	lv2:requiredFeature urid:map, work:schedule ;
 	lv2:extensionData work:interface ;
 	lv2:optionalFeature lv2:hardRTCapable ;
+	ui:ui <http://gareus.org/oss/lv2/convoLV2#ui> ;
 	lv2:port
 	[
 		a lv2:AudioPort ,
@@ -33,5 +35,33 @@
 		lv2:index 1 ;
 		lv2:symbol "out" ;
 		lv2:name "Out"
-	]
+	],
+	[
+		a atom:AtomPort ,
+			lv2:InputPort ;
+		atom:bufferType atom:Sequence ;
+		atom:supports <http://lv2plug.in/ns/ext/patch#Message> ;
+		lv2:index 2 ;
+		lv2:symbol "control" ;
+		lv2:name "Control"
+	],
+	[
+		a atom:AtomPort, 
+			lv2:OutputPort ;
+		atom:bufferType atom:Sequence ;
+		atom:supports <http://lv2plug.in/ns/ext/patch#Message> ;
+		lv2:index 3 ;
+		lv2:symbol "notify" ;
+		lv2:name "Notify"
+	] 
 	.
+
+
+<http://gareus.org/oss/lv2/convoLV2#ui>
+	a ui:GtkUI ;
+	lv2:requiredFeature urid:map ;
+	ui:portNotification [
+		ui:plugin <http://gareus.org/oss/lv2/convoLV2> ;
+		lv2:symbol "notify" ;
+		ui:notifyType atom:Blank
+	] .

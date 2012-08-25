@@ -1,5 +1,5 @@
 cscope.*
 tags
-convolution.o
-convoLV2.so
+*.o
+*.so
 manifest.ttl

@@ -23,19 +23,33 @@
 #include <string.h>
 #include "convolution.h"
 
+#include "lv2/lv2plug.in/ns/ext/atom/forge.h"
 #include "lv2/lv2plug.in/ns/lv2core/lv2.h"
 #include "lv2/lv2plug.in/ns/ext/worker/worker.h"
+
+#include "./uris.h"
 
 typedef enum {
   P_INPUT      = 0,
   P_OUTPUT     = 1,
+  P_CONTROL    = 2,
+  P_NOTIFY     = 3,
 } PortIndex;
 
 typedef struct {
+  LV2_URID_Map*        map;
   LV2_Worker_Schedule *schedule;
+
+  LV2_Atom_Forge forge;
 
   float* input;
   float* output;
+  const LV2_Atom_Sequence* control_port;
+  LV2_Atom_Sequence*       notify_port;
+
+  LV2_Atom_Forge_Frame notify_frame;
+
+  ConvoLV2URIs uris;
 
   LV2convolv *instance;
   int bufsize;
@@ -55,9 +69,17 @@ instantiate(const LV2_Descriptor*     descriptor,
   if(!clv) { return NULL ;}
 
   for (i = 0; features[i]; ++i) {
-    if (!strcmp(features[i]->URI, LV2_WORKER__schedule)) {
+    if (!strcmp(features[i]->URI, LV2_URID__map)) {
+      clv->map = (LV2_URID_Map*)features[i]->data;
+    } else if (!strcmp(features[i]->URI, LV2_WORKER__schedule)) {
       clv->schedule = (LV2_Worker_Schedule*)features[i]->data;
     }
+  }
+
+  if (!clv->map) {
+    fprintf(stderr, "Missing feature uri:map.\n");
+    free(clv);
+    return NULL;
   }
 
   if (!clv->schedule) {
@@ -65,6 +87,10 @@ instantiate(const LV2_Descriptor*     descriptor,
     free(clv);
     return NULL;
   }
+
+  /* Map URIs and initialise forge */
+  map_convolv2_uris(clv->map, &clv->uris);
+  lv2_atom_forge_init(&clv->forge, clv->map);
 
   if (!(clv->instance = allocConvolution())) {
     free(clv);
@@ -171,6 +197,12 @@ connect_port(LV2_Handle instance,
     case P_OUTPUT:
       clv->output = (float*)data;
       break;
+    case P_CONTROL:
+      clv->control_port = (const LV2_Atom_Sequence*)data;
+      break;
+    case P_NOTIFY:
+      clv->notify_port = (LV2_Atom_Sequence*)data;
+      break;
   }
 }
 
@@ -183,12 +215,44 @@ static void
 run(LV2_Handle instance, uint32_t n_samples)
 {
   convoLV2* clv = (convoLV2*)instance;
+  ConvoLV2URIs* uris = &clv->uris;
   int rv = 0;
 
   const float *input[MAX_AUDIO_CHANNELS];
   float *output[MAX_AUDIO_CHANNELS];
   input[0] = clv->input;
   output[0] = clv->output;
+
+  /* Set up forge to write directly to notify output port. */
+  const uint32_t notify_capacity = clv->notify_port->atom.size;
+  lv2_atom_forge_set_buffer(&clv->forge,
+			    (uint8_t*)clv->notify_port,
+			    notify_capacity);
+
+  /* Start a sequence in the notify output port. */
+  lv2_atom_forge_sequence_head(&clv->forge, &clv->notify_frame, 0);
+
+  /* Read incoming events */
+  LV2_ATOM_SEQUENCE_FOREACH(clv->control_port, ev) {
+    //clv->frame_offset = ev->time.frames;
+    if (is_object_type(uris, ev->body.type)) {
+      const LV2_Atom_Object* obj = (LV2_Atom_Object*)&ev->body;
+      if (obj->body.otype == uris->patch_Set) {
+	//clv->schedule->schedule_work(clv->schedule->handle, lv2_atom_total_size(&ev->body), &ev->body);
+#if 1 // TODO this is not RT-save -> worker
+	const LV2_Atom_Object* obj = (const LV2_Atom_Object*) &ev->body;
+	const LV2_Atom* file_path = read_set_file(&clv->uris, obj);
+	const char *fn = (char*)(file_path+1);
+	//const char *fn = LV2_ATOM_BODY_CONST(file_path);
+	fprintf(stderr, "load %s\n", fn);
+	configConvolution(clv->instance, "convolution.ir.file", fn);
+	clv->bufsize = 0; // force reload below
+#endif
+      } else {
+	fprintf(stderr, "Unknown object type %d\n", obj->body.otype);
+      }
+    }
+  }
 
   if (clv->bufsize != n_samples) {
     // re-initialize convolver
@@ -240,7 +304,7 @@ extension_data(const char* uri)
 }
 
 static const LV2_Descriptor descriptor = {
-  "http://gareus.org/oss/lv2/convoLV2",
+  CONVOLV2_URI,
   instantiate,
   connect_port,
   activate,
