@@ -23,7 +23,6 @@
 #include <string.h>
 #include "convolution.h"
 
-#include "lv2/lv2plug.in/ns/ext/atom/forge.h"
 #include "lv2/lv2plug.in/ns/lv2core/lv2.h"
 #include "lv2/lv2plug.in/ns/ext/worker/worker.h"
 
@@ -51,8 +50,8 @@ typedef struct {
 
   ConvoLV2URIs uris;
 
-  LV2convolv *instance;
-  LV2convolv *new_inst;
+  LV2convolv *clv_online; ///< currently active engine
+  LV2convolv *clv_offline; ///< inactive engine being configured
   int bufsize;
   int rate;
   int reinit_in_progress;
@@ -96,8 +95,8 @@ instantiate(const LV2_Descriptor*     descriptor,
   clv->bufsize = 1024;
   clv->rate = rate;
   clv->reinit_in_progress = 0;
-  clv->instance = NULL;
-  clv->new_inst = NULL;
+  clv->clv_online = NULL;
+  clv->clv_offline = NULL;
 
   return (LV2_Handle)clv;
 }
@@ -111,40 +110,54 @@ work(LV2_Handle                  instance,
      const void*                 data)
 {
   convoLV2* clv = (convoLV2*)instance;
-  if (size == 0) {
+  int apply = 0;
 
-    if (!clv->new_inst) {
-      clv->new_inst = allocConvolution();
-    }
-    if (!clv->new_inst) {
+  /* prepare new engine instance */
+  if (!clv->clv_offline) {
+    fprintf(stderr, "allocate offline instance\n");
+    clv->clv_offline = allocConvolution();
+
+    if (!clv->clv_offline) {
       clv->reinit_in_progress = 0;
       return LV2_WORKER_ERR_NO_SPACE; // OOM
     }
+    cloneConvolutionParams(clv->clv_offline, clv->clv_online);
+  }
 
-    cloneConvolutionParams(clv->new_inst, clv->instance);
-    if (initConvolution(clv->new_inst, clv->rate,
-	  /*num channels*/ 1,
-	  /*64 <= buffer-size <=4096*/ clv->bufsize));
+  if (size == 0) {
+    /* simple swap instances with newly created one
+     * this is used to simply update buffersize
+     */
+    apply = 1;
 
-    respond(handle, sizeof(clv->new_inst), &clv->new_inst);
   } else {
+    /* handle message described in Atom */
     const LV2_Atom_Object* obj = (const LV2_Atom_Object*) data;
-    const LV2_Atom* file_path = read_set_file(&clv->uris, obj);
-    const char *fn = (char*)(file_path+1);
-    //const char *fn = LV2_ATOM_BODY_CONST(file_path);
-    fprintf(stderr, "load %s\n", fn);
+    ConvoLV2URIs* uris = &clv->uris;
 
-    if (!clv->new_inst) {
-      clv->new_inst = allocConvolution();
-
-      if (!clv->new_inst) {
-	clv->reinit_in_progress = 0;
-	return LV2_WORKER_ERR_NO_SPACE; // OOM
+    if (obj->body.otype == uris->irfile_load) {
+    fprintf(stderr, "DEBUG LOAD\n");
+#if 1
+      const LV2_Atom* file_path = read_set_file(uris, obj);
+      if (file_path) {
+	const char *fn = (char*)(file_path+1);
+	fprintf(stderr, "load %s\n", fn);
+	configConvolution(clv->clv_offline, "convolution.ir.file", fn);
+	apply = 1;
       }
-      cloneConvolutionParams(clv->new_inst, clv->instance);
+#endif
+    } else {
+      fprintf(stderr, "Unknown message/object type %d\n", obj->body.otype);
     }
-    configConvolution(clv->new_inst, "convolution.ir.file", fn);
-    respond(handle, sizeof(clv->new_inst), &clv->new_inst);
+  }
+
+  if (apply) {
+    if (initConvolution(clv->clv_offline, clv->rate,
+	  /*num in channels*/ 1,
+	  /*num out channels*/ 1,
+	  /*64 <= buffer-size <=4096*/ clv->bufsize));
+    //respond(handle, sizeof(clv->clv_offline), &clv->clv_offline);
+    respond(handle, 0, NULL);
   }
   return LV2_WORKER_SUCCESS;
 }
@@ -154,11 +167,27 @@ work_response(LV2_Handle  instance,
               uint32_t    size,
               const void* data)
 {
+  // swap engine instances
   convoLV2* clv = (convoLV2*)instance;
-  LV2convolv *old = clv->instance;
-  clv->instance = *(LV2convolv*const*) data; // == clv->newinst
-  freeConvolution(old);
-  clv->new_inst = NULL;
+  LV2convolv *old  = clv->clv_online;
+  clv->clv_online  = clv->clv_offline;
+  clv->clv_offline = old;
+
+  // message to UI
+  char fn[1024];
+  if (queryConvolution(clv->clv_online, "convolution.ir.file", fn, 1024) > 0) {
+    lv2_atom_forge_frame_time(&clv->forge, 0);
+    write_set_file(&clv->forge, &clv->uris, fn);
+  }
+#if 0 // DEBUG
+  char *cfg = dumpCfgConvolution(clv->clv_online);
+  if (cfg) {
+    lv2_atom_forge_frame_time(&clv->forge, 0);
+    write_set_file(&clv->forge, &clv->uris, cfg);
+    free(cfg);
+  }
+#endif
+
   clv->reinit_in_progress = 0;
   return LV2_WORKER_SUCCESS;
 }
@@ -191,10 +220,10 @@ static void
 run(LV2_Handle instance, uint32_t n_samples)
 {
   convoLV2* clv = (convoLV2*)instance;
-  ConvoLV2URIs* uris = &clv->uris;
 
-  const float *input[MAX_AUDIO_CHANNELS];
-  float *output[MAX_AUDIO_CHANNELS];
+  const float *input[MAX_OUTPUT_CHANNELS];
+  float *output[MAX_OUTPUT_CHANNELS];
+  // TODO -- assign channels depending on variant.
   input[0] = clv->input;
   output[0] = clv->output;
 
@@ -209,50 +238,35 @@ run(LV2_Handle instance, uint32_t n_samples)
 
   /* Read incoming events */
   LV2_ATOM_SEQUENCE_FOREACH(clv->control_port, ev) {
-    //clv->frame_offset = ev->time.frames;
-    if (is_object_type(uris, ev->body.type)) {
-      const LV2_Atom_Object* obj = (LV2_Atom_Object*)&ev->body;
-      if (obj->body.otype == uris->patch_Set) {
-	clv->schedule->schedule_work(clv->schedule->handle, lv2_atom_total_size(&ev->body), &ev->body);
-#if 0 // TODO this is not RT-save -> worker
-	const LV2_Atom_Object* obj = (const LV2_Atom_Object*) &ev->body;
-	const LV2_Atom* file_path = read_set_file(&clv->uris, obj);
-	const char *fn = (char*)(file_path+1);
-	//const char *fn = LV2_ATOM_BODY_CONST(file_path);
-	fprintf(stderr, "load %s\n", fn);
-	configConvolution(clv->instance, "convolution.ir.file", fn);
-	clv->bufsize = 0; // force reload below
-#endif
-      } else {
-	fprintf(stderr, "Unknown object type %d\n", obj->body.otype);
-      }
-    }
+    clv->schedule->schedule_work(clv->schedule->handle, lv2_atom_total_size(&ev->body), &ev->body);
   }
 
   if (clv->bufsize != n_samples) {
-    // re-initialize convolver
+    // re-initialize convolver with new buffersize
     if (n_samples < 64 || n_samples > 4096 ||
 	/* not power of two */ (n_samples & (n_samples - 1))
 	) {
-      // silence ??
+      // silence output port ?
+      // TODO: notify user (once for each change)
       return;
     }
     if (!clv->reinit_in_progress) {
       clv->reinit_in_progress = 1;
       clv->bufsize = n_samples;
       clv->schedule->schedule_work(clv->schedule->handle, 0, NULL);
-      clv = (convoLV2*)instance;
+      //clv = (convoLV2*)instance;
     }
   }
 
-  convolve(clv->instance, input, output, /*num channels*/1, n_samples);
+  convolve(clv->clv_online, input, output, /*num channels*/1, n_samples);
 }
 
 static void
 cleanup(LV2_Handle instance)
 {
   convoLV2* clv = (convoLV2*)instance;
-  freeConvolution(clv->instance);
+  freeConvolution(clv->clv_online);
+  freeConvolution(clv->clv_offline);
   free(instance);
 }
 

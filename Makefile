@@ -43,11 +43,11 @@ manifest.ttl: manifest.ttl.in
 	sed "s/@LV2NAME@/$(LV2NAME)/;s/@LV2GUI@/$(LV2GUI)/;s/@LIB_EXT@/$(LIB_EXT)/" \
 	  manifest.ttl.in > manifest.ttl
 
-$(LV2NAME)$(LIB_EXT): lv2.c convolution.o
+$(LV2NAME)$(LIB_EXT): lv2.c convolution.o uris.h
 	$(CC) -o $(LV2NAME)$(LIB_EXT) $(CFLAGS) $(LDFLAGS) $(LOADLIBES) \
 	  -std=c99 -shared -Wl,-Bstatic -Wl,-Bdynamic lv2.c convolution.o
 
-$(LV2GUI)$(LIB_EXT): ui.c
+$(LV2GUI)$(LIB_EXT): ui.c uris.h
 	$(CC) -o $(LV2GUI)$(LIB_EXT) $(CFLAGS) $(LDFLAGS) $(GTKCFLAGS) $(GTKLIBS) \
 	  -std=c99 -shared -Wl,-Bstatic -Wl,-Bdynamic ui.c
 

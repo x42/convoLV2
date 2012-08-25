@@ -3,13 +3,7 @@
 
 #include <gtk/gtk.h>
 
-#include "lv2/lv2plug.in/ns/ext/atom/atom.h"
-#include "lv2/lv2plug.in/ns/ext/atom/forge.h"
-#include "lv2/lv2plug.in/ns/ext/atom/util.h"
-#include "lv2/lv2plug.in/ns/ext/patch/patch.h"
-#include "lv2/lv2plug.in/ns/ext/urid/urid.h"
 #include "lv2/lv2plug.in/ns/extensions/ui/ui.h"
-
 #include "./uris.h"
 
 typedef struct {
@@ -22,9 +16,14 @@ typedef struct {
 	LV2UI_Controller     controller;
 
 	GtkWidget* box;
-	GtkWidget* button;
+	GtkWidget* btn_load;
+
 	GtkWidget* label;
 } ConvoLV2UI;
+
+/******************************************************************************
+ * GUI callbacks
+ */
 
 static void
 on_load_clicked(GtkWidget* widget,
@@ -32,9 +31,9 @@ on_load_clicked(GtkWidget* widget,
 {
 	ConvoLV2UI* ui = (ConvoLV2UI*)handle;
 
-	/* Create a dialog to select a sample file. */
+	/* Create a dialog to select a IR file. */
 	GtkWidget* dialog = gtk_file_chooser_dialog_new(
-		"Load Sample",
+		"Load IR",
 		NULL,
 		GTK_FILE_CHOOSER_ACTION_OPEN,
 		GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
@@ -57,8 +56,7 @@ on_load_clicked(GtkWidget* widget,
 	uint8_t obj_buf[OBJ_BUF_SIZE];
 	lv2_atom_forge_set_buffer(&ui->forge, obj_buf, OBJ_BUF_SIZE);
 
-	LV2_Atom* msg = write_set_file(&ui->forge, &ui->uris,
-	                               filename, strlen(filename));
+	LV2_Atom* msg = write_set_file(&ui->forge, &ui->uris, filename);
 
 	ui->write(ui->controller, 2, lv2_atom_total_size(msg),
 	          ui->uris.atom_eventTransfer,
@@ -66,6 +64,28 @@ on_load_clicked(GtkWidget* widget,
 
 	g_free(filename);
 }
+
+/******************************************************************************
+ * GUI
+ */
+
+static void clv_gui_setup(ConvoLV2UI* ui) {
+	ui->box = gtk_vbox_new(FALSE, 4);
+
+	ui->label = gtk_label_new("?");
+	ui->btn_load = gtk_button_new_with_label("Load IR");
+
+	gtk_box_pack_start(GTK_BOX(ui->box), ui->label, TRUE, TRUE, 4);
+	gtk_box_pack_start(GTK_BOX(ui->box), ui->btn_load, FALSE, FALSE, 4);
+
+	g_signal_connect(ui->btn_load, "clicked",
+	                 G_CALLBACK(on_load_clicked),
+	                 ui);
+}
+
+/******************************************************************************
+ * LV2 callbacks
+ */
 
 static LV2UI_Handle
 instantiate(const LV2UI_Descriptor*   descriptor,
@@ -81,7 +101,7 @@ instantiate(const LV2UI_Descriptor*   descriptor,
 	ui->write      = write_function;
 	ui->controller = controller;
 	ui->box        = NULL;
-	ui->button     = NULL;
+	ui->btn_load   = NULL;
 	ui->label      = NULL;
 
 	*widget = NULL;
@@ -93,7 +113,7 @@ instantiate(const LV2UI_Descriptor*   descriptor,
 	}
 
 	if (!ui->map) {
-		fprintf(stderr, "sampler_ui: Host does not support urid:Map\n");
+		fprintf(stderr, "UI: Host does not support urid:map\n");
 		free(ui);
 		return NULL;
 	}
@@ -102,14 +122,7 @@ instantiate(const LV2UI_Descriptor*   descriptor,
 
 	lv2_atom_forge_init(&ui->forge, ui->map);
 
-	ui->box = gtk_vbox_new(FALSE, 4);
-	ui->label = gtk_label_new("?");
-	ui->button = gtk_button_new_with_label("Load Sample");
-	gtk_box_pack_start(GTK_BOX(ui->box), ui->label, TRUE, TRUE, 4);
-	gtk_box_pack_start(GTK_BOX(ui->box), ui->button, FALSE, FALSE, 4);
-	g_signal_connect(ui->button, "clicked",
-	                 G_CALLBACK(on_load_clicked),
-	                 ui);
+	clv_gui_setup(ui);
 
 	*widget = ui->box;
 
@@ -120,7 +133,7 @@ static void
 cleanup(LV2UI_Handle handle)
 {
 	ConvoLV2UI* ui = (ConvoLV2UI*)handle;
-	gtk_widget_destroy(ui->button);
+	gtk_widget_destroy(ui->btn_load);
 	free(ui);
 }
 
@@ -134,24 +147,28 @@ port_event(LV2UI_Handle handle,
 	ConvoLV2UI* ui = (ConvoLV2UI*)handle;
 	if (format == ui->uris.atom_eventTransfer) {
 		LV2_Atom* atom = (LV2_Atom*)buffer;
+
 		if (atom->type == ui->uris.atom_Blank) {
 			LV2_Atom_Object* obj      = (LV2_Atom_Object*)atom;
 			const LV2_Atom*  file_uri = read_set_file(&ui->uris, obj);
 			if (!file_uri) {
-				fprintf(stderr, "Unknown message sent to UI.\n");
+				fprintf(stderr, "UI: Unknown message received from UI.\n");
 				return;
 			}
 
 			const char* uri = (const char*)LV2_ATOM_BODY(file_uri);
 			gtk_label_set_text(GTK_LABEL(ui->label), uri);
 		} else {
-			fprintf(stderr, "Unknown message type.\n");
+			fprintf(stderr, "UI: Unknown message type.\n");
 		}
 	} else {
-		fprintf(stderr, "Unknown format.\n");
+		fprintf(stderr, "UI: Unknown format.\n");
 	}
 }
 
+/******************************************************************************
+ * LV2 setup
+ */
 static const void*
 extension_data(const char* uri)
 {
