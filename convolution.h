@@ -41,6 +41,9 @@ void cloneConvolutionParams(LV2convolv *clv_new, LV2convolv *clv);
 
 extern int convolve (LV2convolv *clv, const float * const * inbuf, float * const* outbuf, const unsigned int n_channels, const unsigned int n_samples);
 
+int queryConvolution (LV2convolv *clv, const char *key, char *value, size_t val_max_len);
+char *dumpCfgConvolution (LV2convolv *clv);
+
 #ifdef __cplusplus
 }
 #endif

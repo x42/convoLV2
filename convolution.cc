@@ -245,6 +245,34 @@ int configConvolution (LV2convolv *clv, const char *key, const char *value) {
   return 1; // OK
 }
 
+char *dumpCfgConvolution (LV2convolv *clv) {
+  if (!clv) return NULL;
+  int i;
+  size_t off = 0;
+  char *rv = (char*) malloc(2048 * sizeof (char)); // TODO calc size
+
+  // TODO use snprintf (MAX_SIZE - off)
+  for (i=0;i<MAX_OUTPUT_CHANNELS;i++) {
+    off+= sprintf(rv + off, "convolution.ir.gain.%d=%f\n", i, clv->ir_gain[i]);
+    off+= sprintf(rv + off, "convolution.ir.delay.%d=%d\n", i, clv->ir_delay[i]);
+    off+= sprintf(rv + off, "convolution.ir.channel.%d=%d\n", i, clv->ir_chan[i]);
+    off+= sprintf(rv + off, "convolution.out.source.%d=%d\n", i, clv->ir_map[i]);
+  }
+  off+= sprintf(rv + off, "convolution.size=%u\n", clv->size);
+  off+= sprintf(rv + off, "convolution.ir.file=%s\n", clv->ir_fn?clv->ir_fn:"");
+  return rv;
+}
+
+int queryConvolution (LV2convolv *clv, const char *key, char *value, size_t val_max_len) {
+  int rv = 0;
+  if (!clv || !value || !key) return -1;
+  if (strcasecmp (key, (char*)"convolution.ir.file") == 0) {
+    rv=snprintf(value, val_max_len, "%s", clv->ir_fn);
+  }
+  // TODO allow querying other settings
+  return rv;
+}
+
 
 int initConvolution (
     LV2convolv *clv,
