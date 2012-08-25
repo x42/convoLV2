@@ -21,9 +21,9 @@
 #define CONVOLUTION_H
 
 
-#define MAX_AUDIO_CHANNELS (2) 
+#define MAX_OUTPUT_CHANNELS (2)
 
-/* zita-convolver lib is C++ so we need extern "C" in order to link 
+/* zita-convolver lib is C++ so we need extern "C" in order to link
  * functions using it. */
 #ifdef __cplusplus
 extern "C" {
@@ -35,7 +35,7 @@ extern LV2convolv *allocConvolution();
 extern void freeConvolution (LV2convolv *clv);
 
 int configConvolution (LV2convolv *clv, const char *key, const char *value);
-extern int initConvolution (LV2convolv *clv, const unsigned int sample_rate, const unsigned int channels, const unsigned int buffersize);
+extern int initConvolution (LV2convolv *clv, const unsigned int sample_rate, const unsigned int in_channel_cnt, const unsigned int out_channel_cnt, const unsigned int buffersize);
 extern void releaseConvolution (LV2convolv *clv);
 void cloneConvolutionParams(LV2convolv *clv_new, LV2convolv *clv);
 
