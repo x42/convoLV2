@@ -207,10 +207,6 @@ connect_port(LV2_Handle instance,
 }
 
 static void
-activate(LV2_Handle instance)
-{
-}
-
 static void
 run(LV2_Handle instance, uint32_t n_samples)
 {
@@ -278,11 +274,8 @@ run(LV2_Handle instance, uint32_t n_samples)
       clv->schedule->schedule_work(clv->schedule->handle, 0, NULL);
     }
   }
-}
 
-static void
-deactivate(LV2_Handle instance)
-{
+  convolve(clv->instance, input, output, /*num channels*/1, n_samples);
 }
 
 static void
@@ -307,9 +300,9 @@ static const LV2_Descriptor descriptor = {
   CONVOLV2_URI,
   instantiate,
   connect_port,
-  activate,
+  NULL, // activate,
   run,
-  deactivate,
+  NULL, // deactivate,
   cleanup,
   extension_data
 };
