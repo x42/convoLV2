@@ -65,40 +65,40 @@ instantiate(const LV2_Descriptor*     descriptor,
             const LV2_Feature* const* features)
 {
   int i;
-  convoLV2* clv = (convoLV2*)calloc(1, sizeof(convoLV2));
-  if(!clv) { return NULL ;}
+  convoLV2* self = (convoLV2*)calloc(1, sizeof(convoLV2));
+  if(!self) { return NULL ;}
 
   for (i = 0; features[i]; ++i) {
     if (!strcmp(features[i]->URI, LV2_URID__map)) {
-      clv->map = (LV2_URID_Map*)features[i]->data;
+      self->map = (LV2_URID_Map*)features[i]->data;
     } else if (!strcmp(features[i]->URI, LV2_WORKER__schedule)) {
-      clv->schedule = (LV2_Worker_Schedule*)features[i]->data;
+      self->schedule = (LV2_Worker_Schedule*)features[i]->data;
     }
   }
 
-  if (!clv->map) {
+  if (!self->map) {
     fprintf(stderr, "Missing feature uri:map.\n");
-    free(clv);
+    free(self);
     return NULL;
   }
 
-  if (!clv->schedule) {
+  if (!self->schedule) {
     fprintf(stderr, "Missing feature work:schedule.\n");
-    free(clv);
+    free(self);
     return NULL;
   }
 
   /* Map URIs and initialise forge */
-  map_convolv2_uris(clv->map, &clv->uris);
-  lv2_atom_forge_init(&clv->forge, clv->map);
+  map_convolv2_uris(self->map, &self->uris);
+  lv2_atom_forge_init(&self->forge, self->map);
 
-  clv->bufsize = 1024;
-  clv->rate = rate;
-  clv->reinit_in_progress = 0;
-  clv->clv_online = NULL;
-  clv->clv_offline = NULL;
+  self->bufsize = 1024;
+  self->rate = rate;
+  self->reinit_in_progress = 0;
+  self->clv_online = NULL;
+  self->clv_offline = NULL;
 
-  return (LV2_Handle)clv;
+  return (LV2_Handle)self;
 }
 
 
@@ -109,19 +109,19 @@ work(LV2_Handle                  instance,
      uint32_t                    size,
      const void*                 data)
 {
-  convoLV2* clv = (convoLV2*)instance;
+  convoLV2* self = (convoLV2*)instance;
   int apply = 0;
 
   /* prepare new engine instance */
-  if (!clv->clv_offline) {
+  if (!self->clv_offline) {
     fprintf(stderr, "allocate offline instance\n");
-    clv->clv_offline = clv_alloc();
+    self->clv_offline = clv_alloc();
 
-    if (!clv->clv_offline) {
-      clv->reinit_in_progress = 0;
+    if (!self->clv_offline) {
+      self->reinit_in_progress = 0;
       return LV2_WORKER_ERR_NO_SPACE; // OOM
     }
-    clv_clone_settings(clv->clv_offline, clv->clv_online);
+    clv_clone_settings(self->clv_offline, self->clv_online);
   }
 
   if (size == 0) {
@@ -133,7 +133,7 @@ work(LV2_Handle                  instance,
   } else {
     /* handle message described in Atom */
     const LV2_Atom_Object* obj = (const LV2_Atom_Object*) data;
-    ConvoLV2URIs* uris = &clv->uris;
+    ConvoLV2URIs* uris = &self->uris;
 
     if (obj->body.otype == uris->irfile_load) {
     fprintf(stderr, "DEBUG LOAD\n");
@@ -142,7 +142,7 @@ work(LV2_Handle                  instance,
       if (file_path) {
 	const char *fn = (char*)(file_path+1);
 	fprintf(stderr, "load %s\n", fn);
-	clv_configure(clv->clv_offline, "convolution.ir.file", fn);
+	clv_configure(self->clv_offline, "convolution.ir.file", fn);
 	apply = 1;
       }
 #endif
@@ -152,11 +152,11 @@ work(LV2_Handle                  instance,
   }
 
   if (apply) {
-    if (clv_initialize(clv->clv_offline, clv->rate,
+    if (clv_initialize(self->clv_offline, self->rate,
 	  /*num in channels*/ 1,
 	  /*num out channels*/ 1,
-	  /*64 <= buffer-size <=4096*/ clv->bufsize));
-    //respond(handle, sizeof(clv->clv_offline), &clv->clv_offline);
+	  /*64 <= buffer-size <=4096*/ self->bufsize));
+    //respond(handle, sizeof(self->clv_offline), &self->clv_offline);
     respond(handle, 0, NULL);
   }
   return LV2_WORKER_SUCCESS;
@@ -168,27 +168,27 @@ work_response(LV2_Handle  instance,
               const void* data)
 {
   // swap engine instances
-  convoLV2* clv = (convoLV2*)instance;
-  LV2convolv *old  = clv->clv_online;
-  clv->clv_online  = clv->clv_offline;
-  clv->clv_offline = old;
+  convoLV2* self = (convoLV2*)instance;
+  LV2convolv *old  = self->clv_online;
+  self->clv_online  = self->clv_offline;
+  self->clv_offline = old;
 
   // message to UI
   char fn[1024];
-  if (clv_query_setting(clv->clv_online, "convolution.ir.file", fn, 1024) > 0) {
-    lv2_atom_forge_frame_time(&clv->forge, 0);
-    write_set_file(&clv->forge, &clv->uris, fn);
+  if (clv_query_setting(self->clv_online, "convolution.ir.file", fn, 1024) > 0) {
+    lv2_atom_forge_frame_time(&self->forge, 0);
+    write_set_file(&self->forge, &self->uris, fn);
   }
 #if 0 // DEBUG
-  char *cfg = clv_dump_settings(clv->clv_online);
+  char *cfg = clv_dump_settings(self->clv_online);
   if (cfg) {
-    lv2_atom_forge_frame_time(&clv->forge, 0);
-    write_set_file(&clv->forge, &clv->uris, cfg);
+    lv2_atom_forge_frame_time(&self->forge, 0);
+    write_set_file(&self->forge, &self->uris, cfg);
     free(cfg);
   }
 #endif
 
-  clv->reinit_in_progress = 0;
+  self->reinit_in_progress = 0;
   return LV2_WORKER_SUCCESS;
 }
 
@@ -198,20 +198,20 @@ connect_port(LV2_Handle instance,
              uint32_t   port,
              void*      data)
 {
-  convoLV2* clv = (convoLV2*)instance;
+  convoLV2* self = (convoLV2*)instance;
 
   switch ((PortIndex)port) {
     case P_INPUT:
-      clv->input = (float*)data;
+      self->input = (float*)data;
       break;
     case P_OUTPUT:
-      clv->output = (float*)data;
+      self->output = (float*)data;
       break;
     case P_CONTROL:
-      clv->control_port = (const LV2_Atom_Sequence*)data;
+      self->control_port = (const LV2_Atom_Sequence*)data;
       break;
     case P_NOTIFY:
-      clv->notify_port = (LV2_Atom_Sequence*)data;
+      self->notify_port = (LV2_Atom_Sequence*)data;
       break;
   }
 }
@@ -219,29 +219,29 @@ connect_port(LV2_Handle instance,
 static void
 run(LV2_Handle instance, uint32_t n_samples)
 {
-  convoLV2* clv = (convoLV2*)instance;
+  convoLV2* self = (convoLV2*)instance;
 
   const float *input[MAX_OUTPUT_CHANNELS];
   float *output[MAX_OUTPUT_CHANNELS];
   // TODO -- assign channels depending on variant.
-  input[0] = clv->input;
-  output[0] = clv->output;
+  input[0] = self->input;
+  output[0] = self->output;
 
   /* Set up forge to write directly to notify output port. */
-  const uint32_t notify_capacity = clv->notify_port->atom.size;
-  lv2_atom_forge_set_buffer(&clv->forge,
-			    (uint8_t*)clv->notify_port,
+  const uint32_t notify_capacity = self->notify_port->atom.size;
+  lv2_atom_forge_set_buffer(&self->forge,
+			    (uint8_t*)self->notify_port,
 			    notify_capacity);
 
   /* Start a sequence in the notify output port. */
-  lv2_atom_forge_sequence_head(&clv->forge, &clv->notify_frame, 0);
+  lv2_atom_forge_sequence_head(&self->forge, &self->notify_frame, 0);
 
   /* Read incoming events */
-  LV2_ATOM_SEQUENCE_FOREACH(clv->control_port, ev) {
-    clv->schedule->schedule_work(clv->schedule->handle, lv2_atom_total_size(&ev->body), &ev->body);
+  LV2_ATOM_SEQUENCE_FOREACH(self->control_port, ev) {
+    self->schedule->schedule_work(self->schedule->handle, lv2_atom_total_size(&ev->body), &ev->body);
   }
 
-  if (clv->bufsize != n_samples) {
+  if (self->bufsize != n_samples) {
     // re-initialize convolver with new buffersize
     if (n_samples < 64 || n_samples > 4096 ||
 	/* not power of two */ (n_samples & (n_samples - 1))
@@ -250,23 +250,23 @@ run(LV2_Handle instance, uint32_t n_samples)
       // TODO: notify user (once for each change)
       return;
     }
-    if (!clv->reinit_in_progress) {
-      clv->reinit_in_progress = 1;
-      clv->bufsize = n_samples;
-      clv->schedule->schedule_work(clv->schedule->handle, 0, NULL);
-      //clv = (convoLV2*)instance;
+    if (!self->reinit_in_progress) {
+      self->reinit_in_progress = 1;
+      self->bufsize = n_samples;
+      self->schedule->schedule_work(self->schedule->handle, 0, NULL);
+      //self = (convoLV2*)instance;
     }
   }
 
-  clv_convolve(clv->clv_online, input, output, /*num channels*/1, n_samples);
+  clv_convolve(self->clv_online, input, output, /*num channels*/1, n_samples);
 }
 
 static void
 cleanup(LV2_Handle instance)
 {
-  convoLV2* clv = (convoLV2*)instance;
-  clv_free(clv->clv_online);
-  clv_free(clv->clv_offline);
+  convoLV2* self = (convoLV2*)instance;
+  clv_free(self->clv_online);
+  clv_free(self->clv_offline);
   free(instance);
 }
 
