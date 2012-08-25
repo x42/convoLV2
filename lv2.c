@@ -115,13 +115,13 @@ work(LV2_Handle                  instance,
   /* prepare new engine instance */
   if (!clv->clv_offline) {
     fprintf(stderr, "allocate offline instance\n");
-    clv->clv_offline = allocConvolution();
+    clv->clv_offline = clv_alloc();
 
     if (!clv->clv_offline) {
       clv->reinit_in_progress = 0;
       return LV2_WORKER_ERR_NO_SPACE; // OOM
     }
-    cloneConvolutionParams(clv->clv_offline, clv->clv_online);
+    clv_clone_settings(clv->clv_offline, clv->clv_online);
   }
 
   if (size == 0) {
@@ -142,7 +142,7 @@ work(LV2_Handle                  instance,
       if (file_path) {
 	const char *fn = (char*)(file_path+1);
 	fprintf(stderr, "load %s\n", fn);
-	configConvolution(clv->clv_offline, "convolution.ir.file", fn);
+	clv_configure(clv->clv_offline, "convolution.ir.file", fn);
 	apply = 1;
       }
 #endif
@@ -152,7 +152,7 @@ work(LV2_Handle                  instance,
   }
 
   if (apply) {
-    if (initConvolution(clv->clv_offline, clv->rate,
+    if (clv_initialize(clv->clv_offline, clv->rate,
 	  /*num in channels*/ 1,
 	  /*num out channels*/ 1,
 	  /*64 <= buffer-size <=4096*/ clv->bufsize));
@@ -175,12 +175,12 @@ work_response(LV2_Handle  instance,
 
   // message to UI
   char fn[1024];
-  if (queryConvolution(clv->clv_online, "convolution.ir.file", fn, 1024) > 0) {
+  if (clv_query_setting(clv->clv_online, "convolution.ir.file", fn, 1024) > 0) {
     lv2_atom_forge_frame_time(&clv->forge, 0);
     write_set_file(&clv->forge, &clv->uris, fn);
   }
 #if 0 // DEBUG
-  char *cfg = dumpCfgConvolution(clv->clv_online);
+  char *cfg = clv_dump_settings(clv->clv_online);
   if (cfg) {
     lv2_atom_forge_frame_time(&clv->forge, 0);
     write_set_file(&clv->forge, &clv->uris, cfg);
@@ -258,15 +258,15 @@ run(LV2_Handle instance, uint32_t n_samples)
     }
   }
 
-  convolve(clv->clv_online, input, output, /*num channels*/1, n_samples);
+  clv_convolve(clv->clv_online, input, output, /*num channels*/1, n_samples);
 }
 
 static void
 cleanup(LV2_Handle instance)
 {
   convoLV2* clv = (convoLV2*)instance;
-  freeConvolution(clv->clv_online);
-  freeConvolution(clv->clv_offline);
+  clv_free(clv->clv_online);
+  clv_free(clv->clv_offline);
   free(instance);
 }
 

@@ -20,17 +20,17 @@
 /* Usage information:
  *
  * Non-realtime, initialization:
- *  1)  allocConvolution();
- *  2)  configConvolution(); // can be called multiple times
- *  3)  initConvolution();   // fix settings
+ *  1)  clv_alloc();
+ *  2)  clv_configure(); // can be called multiple times
+ *  3)  clv_initialize();   // fix settings
  *
  * Realtime process
  *  4)  convolve();
  *
  * Non-rt, cleanup
- *  5A) releaseConvolution(); // -> goto (2) or (3)
+ *  5A) clv_release(); // -> goto (2) or (3)
  * OR
- *  5B) freeConvolution(); // -> The End
+ *  5B) clv_free(); // -> The End
  */
 
 #include <stdio.h>
@@ -161,7 +161,7 @@ int audiofile_read (const char *fn, const int sample_rate, float **buf, unsigned
   return (0);
 }
 
-LV2convolv *allocConvolution() {
+LV2convolv *clv_alloc() {
   int i;
   LV2convolv *clv = (LV2convolv*) calloc(1, sizeof(LV2convolv));
   if (!clv) {
@@ -181,7 +181,7 @@ LV2convolv *allocConvolution() {
   return clv;
 }
 
-void releaseConvolution (LV2convolv *clv) {
+void clv_release (LV2convolv *clv) {
   if (!clv) return;
   if (clv->convproc) {
     clv->convproc->stop_process ();
@@ -190,7 +190,7 @@ void releaseConvolution (LV2convolv *clv) {
   clv->convproc = NULL;
 }
 
-void cloneConvolutionParams(LV2convolv *clv_new, LV2convolv *clv) {
+void clv_clone_settings(LV2convolv *clv_new, LV2convolv *clv) {
   if (!clv) return;
   memcpy(clv_new, clv, sizeof(LV2convolv));
   clv_new->convproc = NULL;
@@ -199,16 +199,16 @@ void cloneConvolutionParams(LV2convolv *clv_new, LV2convolv *clv) {
   }
 }
 
-void freeConvolution (LV2convolv *clv) {
+void clv_free (LV2convolv *clv) {
   if (!clv) return;
-  releaseConvolution(clv);
+  clv_release(clv);
   if (clv->ir_fn) {
     free(clv->ir_fn);
   }
   free(clv);
 }
 
-int configConvolution (LV2convolv *clv, const char *key, const char *value) {
+int clv_configure (LV2convolv *clv, const char *key, const char *value) {
   if (!clv) return 0;
   int n;
   if (strcasecmp (key, (char*)"convolution.ir.file") == 0) {
@@ -245,7 +245,7 @@ int configConvolution (LV2convolv *clv, const char *key, const char *value) {
   return 1; // OK
 }
 
-char *dumpCfgConvolution (LV2convolv *clv) {
+char *clv_dump_settings (LV2convolv *clv) {
   if (!clv) return NULL;
   int i;
   size_t off = 0;
@@ -263,7 +263,7 @@ char *dumpCfgConvolution (LV2convolv *clv) {
   return rv;
 }
 
-int queryConvolution (LV2convolv *clv, const char *key, char *value, size_t val_max_len) {
+int clv_query_setting (LV2convolv *clv, const char *key, char *value, size_t val_max_len) {
   int rv = 0;
   if (!clv || !value || !key) return -1;
   if (strcasecmp (key, (char*)"convolution.ir.file") == 0) {
@@ -274,7 +274,7 @@ int queryConvolution (LV2convolv *clv, const char *key, char *value, size_t val_
 }
 
 
-int initConvolution (
+int clv_initialize (
     LV2convolv *clv,
     const unsigned int sample_rate,
     const unsigned int in_channel_cnt,
@@ -400,7 +400,7 @@ void silent_output(float * const * outbuf, size_t n_channels, size_t n_samples) 
 /*
  *
  */
-int convolve (LV2convolv *clv, const float * const * inbuf, float * const * outbuf, const unsigned int n_channels, const unsigned int n_samples) {
+int clv_convolve (LV2convolv *clv, const float * const * inbuf, float * const * outbuf, const unsigned int n_channels, const unsigned int n_samples) {
   unsigned int i,c;
 
   if (!clv || !clv->convproc) {
