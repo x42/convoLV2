@@ -13,7 +13,10 @@ LIB_EXT=.so
 
 lv2dir = $(PREFIX)/lib/lv2
 LOADLIBES=-lm
+GTKCFLAGS=`pkg-config --cflags gtk+-2.0`
+GTKLIBS=`pkg-config --libs gtk+-2.0`
 LV2NAME=convoLV2
+LV2GUI=convoLV2UI
 CFLAGS+=-fPIC
 CXXFLAGS=$(CFLAGS)
 
@@ -34,14 +37,19 @@ endif
 # build target definitions
 default: all
 
-all: manifest.ttl $(LV2NAME)$(LIB_EXT)
+all: manifest.ttl $(LV2NAME)$(LIB_EXT) $(LV2GUI)$(LIB_EXT)
 
 manifest.ttl: manifest.ttl.in
-	sed "s/@LV2NAME@/$(LV2NAME)/;s/@LIB_EXT@/$(LIB_EXT)/" manifest.ttl.in > manifest.ttl
+	sed "s/@LV2NAME@/$(LV2NAME)/;s/@LV2GUI@/$(LV2GUI)/;s/@LIB_EXT@/$(LIB_EXT)/" \
+	  manifest.ttl.in > manifest.ttl
 
-$(LV2NAME)$(LIB_EXT): lv2.c convolution.o
+$(LV2NAME)$(LIB_EXT): lv2.c convolution.o uris.h
 	$(CC) -o $(LV2NAME)$(LIB_EXT) $(CFLAGS) $(LDFLAGS) $(LOADLIBES) \
-	  -shared -Wl,-Bstatic -Wl,-Bdynamic lv2.c convolution.o
+	  -std=c99 -shared -Wl,-Bstatic -Wl,-Bdynamic lv2.c convolution.o
+
+$(LV2GUI)$(LIB_EXT): ui.c uris.h
+	$(CC) -o $(LV2GUI)$(LIB_EXT) $(CFLAGS) $(LDFLAGS) $(GTKCFLAGS) $(GTKLIBS) \
+	  -std=c99 -shared -Wl,-Bstatic -Wl,-Bdynamic ui.c
 
 %.o: %.cc %.h
 
@@ -50,12 +58,14 @@ $(LV2NAME)$(LIB_EXT): lv2.c convolution.o
 install: all
 	install -d $(DESTDIR)$(lv2dir)/$(LV2NAME)
 	install -m755 $(LV2NAME)$(LIB_EXT) $(DESTDIR)$(lv2dir)/$(LV2NAME)
+	install -m755 $(LV2GUI)$(LIB_EXT) $(DESTDIR)$(lv2dir)/$(LV2NAME)
 	install -m644 manifest.ttl $(LV2NAME).ttl $(DESTDIR)$(lv2dir)/$(LV2NAME)
 
 uninstall:
 	rm -f $(DESTDIR)$(lv2dir)/$(LV2NAME)/manifest.ttl
 	rm -f $(DESTDIR)$(lv2dir)/$(LV2NAME)/*.ttl
 	rm -f $(DESTDIR)$(lv2dir)/$(LV2NAME)/$(LV2NAME)$(LIB_EXT)
+	rm -f $(DESTDIR)$(lv2dir)/$(LV2GUI)/$(LV2NAME)$(LIB_EXT)
 	-rmdir $(DESTDIR)$(lv2dir)/$(LV2NAME)
 
 clean:

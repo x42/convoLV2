@@ -14,24 +14,26 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software Foundation,
- * Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  
+ * Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 /* Usage information:
  *
  * Non-realtime, initialization:
- *  1)  allocConvolution();
- *  2)  configConvolution(); // can be called multiple times
- *  3)  initConvolution();   // fix settings
+ *  1)  clv_alloc();
+ *  2)  clv_configure(); // can be called multiple times
+ *  3)  clv_initialize();   // fix settings
  *
  * Realtime process
  *  4)  convolve();
  *
  * Non-rt, cleanup
- *  5A) releaseConvolution(); // -> goto (2) or (3)
+ *  5A) clv_release(); // -> goto (2) or (3)
  * OR
- *  5B) freeConvolution(); // -> The End
+ *  5B) clv_free(); // -> The End
  */
+
+#define NOGUIFORASSIGNMENTS 1 // hack currently there is no UI for assigning channels - this allows 1->1, 2->2, 2->2(true stereo)
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -55,9 +57,11 @@ struct LV2convolv {
 
   /* IR file */
   char *ir_fn; ///< path to IR file
-  unsigned int ir_chan[MAX_AUDIO_CHANNELS]; ///< channel map: ir_chan[out-channel] = file-channel; out-channel: 0..N-1, file-channel: 1..M
-  unsigned int ir_delay[MAX_AUDIO_CHANNELS]; ///< delay for each out-chanel; out-channel: 0..N-1, value >=0
-  float ir_gain[MAX_AUDIO_CHANNELS]; ///< IR-gain for each out-channel; out-channel: 0..N-1, value: float -inf..+inf
+  unsigned int chn_inp[MAX_CHANNEL_MAPS]; ///< I/O channel map: ir_map[id] = in-channel ;
+  unsigned int chn_out[MAX_CHANNEL_MAPS]; ///< I/O channel map: ir_map[id] = out-channel ;
+  unsigned int ir_chan[MAX_CHANNEL_MAPS]; ///< IR channel map: ir_chan[id] = file-channel;
+  unsigned int ir_delay[MAX_CHANNEL_MAPS]; ///< pre-delay ; value >=0
+  float ir_gain[MAX_CHANNEL_MAPS]; ///< IR-gain value: float -inf..+inf
 
   /* convolution settings*/
   unsigned int size; ///< max length of convolution computation
@@ -160,23 +164,35 @@ int audiofile_read (const char *fn, const int sample_rate, float **buf, unsigned
   return (0);
 }
 
-LV2convolv *allocConvolution() {
+LV2convolv *clv_alloc() {
+  int i;
   LV2convolv *clv = (LV2convolv*) calloc(1, sizeof(LV2convolv));
   if (!clv) {
     return NULL;
   }
   clv->convproc = NULL;
-  clv->ir_chan[0] = 1; clv->ir_chan[1] = 2;
-  clv->ir_delay[0]  = clv->ir_delay[1] = 0;
-  clv->ir_gain[0] = clv->ir_gain[1] = 0.5;
+  for (i=0;i<MAX_CHANNEL_MAPS; i++) {
+    clv->ir_chan[i]   = i+1;
+#ifndef NOGUIFORASSIGNMENTS
+    clv->chn_inp[i]   = i+1;
+    clv->chn_out[i]   = i+1;
+#else
+    clv->chn_inp[i]   = (i%2)+1;
+    clv->chn_out[i]   = ((i+i/2)%2)+1;
+#endif
+    clv->ir_delay[i]  = 0;
+    clv->ir_gain[i]   = 0.5;
+  }
   clv->ir_fn = NULL;
 
   clv->density = 0.0;
   clv->size = 204800;
+  //fprintf(stderr,"%s", clv_dump_settings(clv));
   return clv;
 }
 
-void releaseConvolution (LV2convolv *clv) {
+void clv_release (LV2convolv *clv) {
+  if (!clv) return;
   if (clv->convproc) {
     clv->convproc->stop_process ();
     delete(clv->convproc);
@@ -184,7 +200,8 @@ void releaseConvolution (LV2convolv *clv) {
   clv->convproc = NULL;
 }
 
-void cloneConvolutionParams(LV2convolv *clv_new, LV2convolv *clv) {
+void clv_clone_settings(LV2convolv *clv_new, LV2convolv *clv) {
+  if (!clv) return;
   memcpy(clv_new, clv, sizeof(LV2convolv));
   clv_new->convproc = NULL;
   if (clv->ir_fn) {
@@ -192,33 +209,45 @@ void cloneConvolutionParams(LV2convolv *clv_new, LV2convolv *clv) {
   }
 }
 
-void freeConvolution (LV2convolv *clv) {
-  releaseConvolution(clv);
+void clv_free (LV2convolv *clv) {
+  if (!clv) return;
+  clv_release(clv);
   if (clv->ir_fn) {
     free(clv->ir_fn);
   }
   free(clv);
 }
 
-int configConvolution (LV2convolv *clv, const char *key, const char *value) {
+int clv_configure (LV2convolv *clv, const char *key, const char *value) {
+  if (!clv) return 0;
   int n;
   if (strcasecmp (key, (char*)"convolution.ir.file") == 0) {
     free(clv->ir_fn);
     clv->ir_fn = strdup(value);
+  } else if (!strncasecmp (key, (char*)"convolution.out.source.", 23)) {
+    if (sscanf (key, (char*)"convolution.source.%d", &n) == 1) {
+      if ((0 < n) && (n <= MAX_CHANNEL_MAPS))
+	clv->chn_inp[n] = atoi(value);
+    }
+  } else if (!strncasecmp (key, (char*)"convolution.out.source.", 23)) {
+    if (sscanf (key, (char*)"convolution.output.%d", &n) == 1) {
+      if ((0 <= n) && (n < MAX_CHANNEL_MAPS))
+	clv->chn_out[n] = atoi(value);
+    }
   } else if (!strncasecmp (key, (char*)"convolution.ir.channel.", 23)) {
     if (sscanf (key, (char*)"convolution.ir.channel.%d", &n) == 1) {
-      if ((0 < n) && (n <= MAX_AUDIO_CHANNELS))
-	clv->ir_chan[n-1] = atoi(value);
+      if ((0 <= n) && (n < MAX_CHANNEL_MAPS))
+	clv->ir_chan[n] = atoi(value);
     }
   } else if (!strncasecmp (key, (char*)"convolution.ir.gain.", 20)) {
     if (sscanf (key, (char*)"convolution.ir.gain.%d", &n) == 1) {
-      if ((0 < n) && (n <= MAX_AUDIO_CHANNELS))
-	clv->ir_gain[n-1] = atof(value);
+      if ((0 <= n) && (n < MAX_CHANNEL_MAPS))
+	clv->ir_gain[n] = atof(value);
     }
   } else if (!strncasecmp (key, (char*)"convolution.ir.delay.", 21)) {
     if (sscanf (key, (char*)"convolution.ir.delay.%d", &n) == 1) {
-      if ((0 < n) && (n <= MAX_AUDIO_CHANNELS))
-	clv->ir_delay[n-1] = atoi(value);
+      if ((0 <= n) && (n < MAX_CHANNEL_MAPS))
+	clv->ir_delay[n] = atoi(value);
     }
   } else if (strcasecmp (key, (char*)"convolution.size") == 0) {
     clv->size = atoi(value);
@@ -231,11 +260,49 @@ int configConvolution (LV2convolv *clv, const char *key, const char *value) {
   return 1; // OK
 }
 
+char *clv_dump_settings (LV2convolv *clv) {
+  if (!clv) return NULL;
+  int i;
+  size_t off = 0;
+#define MAX_CFG_SIZE ( MAX_CHANNEL_MAPS * 158 + 50 + (clv->ir_fn?strlen(clv->ir_fn):0) )
+  char *rv = (char*) malloc(MAX_CFG_SIZE * sizeof (char));
 
-int initConvolution (
+  for (i=0;i<MAX_CHANNEL_MAPS;i++) {
+    // f=12 ; d= 3 ; v=10
+    off+= sprintf(rv + off, "convolution.ir.gain.%d=%e\n",    i, clv->ir_gain[i]); // 22 + d + f
+    off+= sprintf(rv + off, "convolution.ir.delay.%d=%d\n",   i, clv->ir_delay[i]);// 23 + d + v
+    off+= sprintf(rv + off, "convolution.ir.channel.%d=%d\n", i, clv->ir_chan[i]); // 25 + d + d
+    off+= sprintf(rv + off, "convolution.source.%d=%d\n",     i, clv->chn_inp[i]); // 21 + d + d
+    off+= sprintf(rv + off, "convolution.output.%d=%d\n",     i, clv->chn_out[i]); // 21 + d + d
+  }
+  off+= sprintf(rv + off, "convolution.size=%u\n", clv->size);                     // 18 + v
+  off+= sprintf(rv + off, "convolution.ir.file=%s\n", clv->ir_fn?clv->ir_fn:"");   // 21 + s
+  fprintf(stderr, "%d / %d \n", off, MAX_CFG_SIZE);
+  return rv;
+}
+
+int clv_query_setting (LV2convolv *clv, const char *key, char *value, size_t val_max_len) {
+  int rv = 0;
+  if (!clv || !value || !key) return -1;
+
+  if (strcasecmp (key, (char*)"convolution.ir.file") == 0) {
+    if (clv->ir_fn) {
+      if (strlen(clv->ir_fn) >= val_max_len)
+	rv = -1;
+      else
+	rv=snprintf(value, val_max_len, "%s", clv->ir_fn);
+    }
+  }
+  // TODO allow querying other settings
+  return rv;
+}
+
+
+int clv_initialize (
     LV2convolv *clv,
     const unsigned int sample_rate,
-    const unsigned int channels,
+    const unsigned int in_channel_cnt,
+    const unsigned int out_channel_cnt,
     const unsigned int buffersize)
 {
   unsigned int i,c;
@@ -276,19 +343,23 @@ int initConvolution (
   clv->convproc->set_density (clv->density);
 
   if (clv->convproc->configure (
-	/*in*/  channels,
-	/*out*/ channels,
+	/*in*/  in_channel_cnt,
+	/*out*/ out_channel_cnt,
 	/*max-convolution length */ clv->size,
 	/*quantum*/  buffersize,
 	/*min-part*/ buffersize /* must be >= fragm */,
 	/*max-part*/ buffersize /* Convproc::MAXPART -> stich output every period */
 	)) {
     fprintf (stderr, "convoLV2: Cannot initialize convolution engine.\n");
+    delete(clv->convproc);
+    clv->convproc = NULL;
     return -1;
   }
 
   if (audiofile_read(clv->ir_fn, sample_rate, &p, &nchan, &nfram)) {
     fprintf(stderr, "convoLV2: failed to read IR.\n");
+    delete(clv->convproc);
+    clv->convproc = NULL;
     return -1;
   }
 
@@ -299,21 +370,49 @@ int initConvolution (
     return -1;
   }
 
-  for (c=0; c < MAX_AUDIO_CHANNELS && c < channels; c++) {
+  fprintf (stderr, "convoLV2: CFG %din, %dout | IR: %dchn, %dsamples\n",
+      in_channel_cnt, out_channel_cnt, nchan, nfram);
+
+  for (c=0; c < MAX_CHANNEL_MAPS; c++) {
+    if (clv->chn_inp[c]==0 || clv->chn_inp[c] > out_channel_cnt) break;
+
+#ifdef NOGUIFORASSIGNMENTS
+    if (c >= nchan && c>1) break; // XXX temp hack, -- XXX should be removed once UI assignments are possible
+#endif
 
     if (clv->ir_chan[c] > nchan || clv->ir_chan[c] < 1) {
-      fprintf(stderr, "convoLV2: invalid channel in IR file; expected: 1 <= %d <= %d\n", clv->ir_chan[c], nchan);
+      fprintf(stderr, "convoLV2: invalid IR-file channel assigned; expected: 1 <= %d <= %d\n", clv->ir_chan[c], nchan);
+#ifndef NOGUIFORASSIGNMENTS // fail if assignment is incorrect
       free(p); free(gb);
+      delete(clv->convproc);
+      clv->convproc = NULL;
       return -1;
+#else
+      clv->ir_chan[c] = ((clv->ir_chan[c]-1)%nchan)+1;
+      fprintf(stderr, "convoLV2: using IR-file channel %d\n", clv->ir_chan[c]);
+#endif
     }
     if (clv->ir_delay[c] < 0) {
       fprintf(stderr, "convoLV2: invalid delay; expected: 0 <= %d\n", clv->ir_delay[c]);
       free(p); free(gb);
+      delete(clv->convproc);
+      clv->convproc = NULL;
       return -1;
     }
 
     for (i=0; i < nfram; ++i) gb[i] = p[i*nchan + clv->ir_chan[c]-1] * clv->ir_gain[c];
-    clv->convproc->impdata_create (c, c, 1, gb, clv->ir_delay[c], clv->ir_delay[c] + nfram);
+
+    fprintf(stderr, "convoLV2: SET in %d -> out %d [IR chn:%d gain:%+.3f dly:%d]\n",
+	((clv->chn_inp[c]-1)%in_channel_cnt) +1,
+	((clv->chn_out[c]-1)%out_channel_cnt) +1,
+	clv->ir_chan[c],
+	clv->ir_gain[c],
+	clv->ir_delay[c]
+	);
+    clv->convproc->impdata_create (
+	(clv->chn_inp[c]-1)%in_channel_cnt,
+	(clv->chn_out[c]-1)%out_channel_cnt,
+	1, gb, clv->ir_delay[c], clv->ir_delay[c] + nfram);
   }
 
   free(gb);
@@ -326,16 +425,19 @@ int initConvolution (
 
   if (clv->convproc->start_process (0, 0)) {
     fprintf(stderr, "convoLV2: Cannot start processing.\n");
+    delete(clv->convproc);
+    clv->convproc = NULL;
     return -1;
   }
 
   return 0;
 }
 
-void copy_input_to_output(const float * const * inbuf, float * const * outbuf, size_t n_channels, size_t n_samples) {
-  unsigned int c;
-  for (c=0; c < n_channels; ++c)
-    memcpy(outbuf[c], inbuf[c], n_samples * sizeof(float));
+int clv_is_active (LV2convolv *clv) {
+  if (!clv || !clv->convproc) {
+    return 0;
+  }
+  return 1;
 }
 
 void silent_output(float * const * outbuf, size_t n_channels, size_t n_samples) {
@@ -347,7 +449,11 @@ void silent_output(float * const * outbuf, size_t n_channels, size_t n_samples) 
 /*
  *
  */
-int convolve (LV2convolv *clv, const float * const * inbuf, float * const * outbuf, const unsigned int n_channels, const unsigned int n_samples) {
+int clv_convolve (LV2convolv *clv,
+    const float * const * inbuf, float * const * outbuf,
+    const unsigned int in_channel_cnt,
+    const unsigned int out_channel_cnt,
+    const unsigned int n_samples) {
   unsigned int i,c;
 
   if (!clv || !clv->convproc) {
@@ -357,23 +463,18 @@ int convolve (LV2convolv *clv, const float * const * inbuf, float * const * outb
   if (clv->convproc->state () == Convproc::ST_WAIT) clv->convproc->check_stop ();
 
   if (clv->fragment_size != n_samples) {
-    silent_output(outbuf, n_channels, n_samples);
+    silent_output(outbuf, out_channel_cnt, n_samples);
     return (-1);
-  }
-
-  if (n_channels > MAX_AUDIO_CHANNELS) {
-    silent_output(outbuf, n_channels, n_samples);
-    return (-2);
   }
 
   if (clv->convproc->state () != Convproc::ST_PROC) {
     /* Note this will actually never happen in sync-mode */
-    fprintf(stderr, "fons br0ke libzita-resampler.\n");
-    copy_input_to_output(inbuf, outbuf, n_channels, n_samples);
+    fprintf(stderr, "fons br0ke libzita-resampler :)\n");
+    silent_output(outbuf, out_channel_cnt, n_samples);
     return (n_samples);
   }
 
-  for (c = 0; c < n_channels; ++c)
+  for (c = 0; c < in_channel_cnt; ++c)
 #if 0
     memcpy (clv->convproc->inpdata (c), inbuf[c], n_samples * sizeof (float));
 #else // prevent denormals
@@ -389,12 +490,12 @@ int convolve (LV2convolv *clv, const float * const * inbuf, float * const * outb
 
   if (f /*&Convproc::FL_LOAD)*/ ) {
     /* Note this will actually never happen in sync-mode */
-    fprintf(stderr, "fons br0ke libzita-resampler.\n");
-    copy_input_to_output(inbuf, outbuf, n_channels, n_samples);
+    fprintf(stderr, "fons br0ke libzita-resampler :).\n");
+    silent_output(outbuf, out_channel_cnt, n_samples);
     return (n_samples);
   }
 
-  for (c = 0; c < n_channels; ++c)
+  for (c = 0; c < out_channel_cnt; ++c)
     memcpy (outbuf[c], clv->convproc->outdata (c), n_samples * sizeof (float));
 
   return (n_samples);
