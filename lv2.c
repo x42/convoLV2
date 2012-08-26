@@ -42,8 +42,8 @@
 
 
 #define ENUMPORT(n) \
-  P_INPUT ## n = (n*2+2), \
-  P_OUTPUT ## n = (n*2+3),
+  P_OUTPUT ## n = (n*2+2), \
+  P_INPUT ## n = (n*2+3),
 
 typedef enum {
   P_CONTROL    = 0,
@@ -439,7 +439,18 @@ static const LV2_Descriptor descriptor0 = {
 };
 
 static const LV2_Descriptor descriptor1 = {
-  CONVOLV2_URI "Stereo",
+  CONVOLV2_URI "#Stereo",
+  instantiate,
+  connect_port,
+  NULL, // activate,
+  run,
+  NULL, // deactivate,
+  cleanup,
+  extension_data
+};
+
+static const LV2_Descriptor descriptor2 = {
+  CONVOLV2_URI "#MonoToStereo",
   instantiate,
   connect_port,
   NULL, // activate,
@@ -458,6 +469,8 @@ lv2_descriptor(uint32_t index)
     return &descriptor0;
   case 1:
     return &descriptor1;
+  case 2:
+    return &descriptor2;
   default:
     return NULL;
   }

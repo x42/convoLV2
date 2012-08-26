@@ -374,7 +374,7 @@ int clv_initialize (
       in_channel_cnt, out_channel_cnt, nchan, nfram);
 
   for (c=0; c < MAX_CHANNEL_MAPS; c++) {
-    if (clv->chn_inp[c]==0 || clv->chn_inp[c] > in_channel_cnt) break;
+    if (clv->chn_inp[c]==0 || clv->chn_inp[c] > out_channel_cnt) break;
 
 #ifdef NOGUIFORASSIGNMENTS
     if (c >= nchan && c>1) break; // XXX temp hack, -- XXX should be removed once UI assignments are possible
