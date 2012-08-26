@@ -449,7 +449,11 @@ void silent_output(float * const * outbuf, size_t n_channels, size_t n_samples) 
 /*
  *
  */
-int clv_convolve (LV2convolv *clv, const float * const * inbuf, float * const * outbuf, const unsigned int n_channels, const unsigned int n_samples) {
+int clv_convolve (LV2convolv *clv,
+    const float * const * inbuf, float * const * outbuf,
+    const unsigned int in_channel_cnt,
+    const unsigned int out_channel_cnt,
+    const unsigned int n_samples) {
   unsigned int i,c;
 
   if (!clv || !clv->convproc) {
@@ -459,23 +463,18 @@ int clv_convolve (LV2convolv *clv, const float * const * inbuf, float * const * 
   if (clv->convproc->state () == Convproc::ST_WAIT) clv->convproc->check_stop ();
 
   if (clv->fragment_size != n_samples) {
-    silent_output(outbuf, n_channels, n_samples);
+    silent_output(outbuf, out_channel_cnt, n_samples);
     return (-1);
-  }
-
-  if (n_channels > MAX_CHANNEL_MAPS) {
-    silent_output(outbuf, n_channels, n_samples);
-    return (-2);
   }
 
   if (clv->convproc->state () != Convproc::ST_PROC) {
     /* Note this will actually never happen in sync-mode */
     fprintf(stderr, "fons br0ke libzita-resampler :)\n");
-    silent_output(outbuf, n_channels, n_samples);
+    silent_output(outbuf, out_channel_cnt, n_samples);
     return (n_samples);
   }
 
-  for (c = 0; c < n_channels; ++c)
+  for (c = 0; c < in_channel_cnt; ++c)
 #if 0
     memcpy (clv->convproc->inpdata (c), inbuf[c], n_samples * sizeof (float));
 #else // prevent denormals
@@ -492,11 +491,11 @@ int clv_convolve (LV2convolv *clv, const float * const * inbuf, float * const * 
   if (f /*&Convproc::FL_LOAD)*/ ) {
     /* Note this will actually never happen in sync-mode */
     fprintf(stderr, "fons br0ke libzita-resampler :).\n");
-    silent_output(outbuf, n_channels, n_samples);
+    silent_output(outbuf, out_channel_cnt, n_samples);
     return (n_samples);
   }
 
-  for (c = 0; c < n_channels; ++c)
+  for (c = 0; c < out_channel_cnt; ++c)
     memcpy (outbuf[c], clv->convproc->outdata (c), n_samples * sizeof (float));
 
   return (n_samples);

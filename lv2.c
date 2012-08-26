@@ -302,7 +302,10 @@ run(LV2_Handle instance, uint32_t n_samples)
     }
   }
 
-  clv_convolve(self->clv_online, input, output, self->chn_out, n_samples);
+  clv_convolve(self->clv_online, input, output,
+      self->chn_in,
+      self->chn_out,
+      n_samples);
 }
 
 static void
