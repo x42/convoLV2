@@ -167,7 +167,7 @@ work(LV2_Handle                  instance,
     const LV2_Atom_Object* obj = (const LV2_Atom_Object*) data;
     ConvoLV2URIs* uris = &self->uris;
 
-    if (obj->body.otype == uris->clv2_load_ir) {
+    if (obj->body.otype == uris->patch_Set) {
       const LV2_Atom* file_path = read_set_file(uris, obj);
       if (file_path) {
 	const char *fn = (char*)(file_path+1);
@@ -330,7 +330,7 @@ save(LV2_Handle                instance,
 
   char *cfg = clv_dump_settings(self->clv_online);
   if (cfg) {
-    store(handle, self->uris.clv2_settings,
+    store(handle, self->uris.clv2_state,
 	cfg, strlen(cfg) + 1,
 	self->uris.atom_String,
 	LV2_STATE_IS_POD | LV2_STATE_IS_PORTABLE);
@@ -347,7 +347,7 @@ save(LV2_Handle                instance,
     char fn[1024]; // PATH_MAX
     if (clv_query_setting(self->clv_online, "convolution.ir.file", fn, 1024) > 0 ) {
       char* apath = map_path->abstract_path(map_path->handle, fn);
-      store(handle, self->uris.clv2_file,
+      store(handle, self->uris.clv2_ir_file,
 	  apath, strlen(apath) + 1,
 	  self->uris.atom_Path,
 	  LV2_STATE_IS_POD | LV2_STATE_IS_PORTABLE);
@@ -379,7 +379,7 @@ restore(LV2_Handle                  instance,
     }
   }
 
-  const void* value = retrieve(handle, self->uris.clv2_settings, &size, &type, &valflags);
+  const void* value = retrieve(handle, self->uris.clv2_state, &size, &type, &valflags);
 
   if (value) {
     const char* cfg = (const char*)value;
@@ -398,7 +398,7 @@ restore(LV2_Handle                  instance,
     }
   }
 
-  value = retrieve(handle, self->uris.clv2_file, &size, &type, &valflags);
+  value = retrieve(handle, self->uris.clv2_ir_file, &size, &type, &valflags);
 
   if (value) {
     const char* path = (const char*)value;
