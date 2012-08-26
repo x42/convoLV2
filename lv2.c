@@ -170,10 +170,9 @@ work(LV2_Handle                  instance,
   }
 
   if (apply) {
-    if (clv_initialize(self->clv_offline, self->rate,
+    if (!clv_initialize(self->clv_offline, self->rate,
 	  self->chn_in, self->chn_out,
-	  /*64 <= buffer-size <=4096*/ self->bufsize));
-    //respond(handle, sizeof(self->clv_offline), &self->clv_offline);
+	  /*64 <= buffer-size <=4096*/ self->bufsize)) /*XXX*/ ; /* < respond anyway */
     respond(handle, 0, NULL);
   }
   return LV2_WORKER_SUCCESS;
@@ -196,6 +195,8 @@ work_response(LV2_Handle  instance,
     lv2_atom_forge_frame_time(&self->forge, 0);
     write_set_file(&self->forge, &self->uris, fn);
   }
+  // TODO: notify GUI if cfg was successful || if convolution is running (check clv->clv_online->convproc != NULL )
+
 #if 0 // DEBUG -- not rt-safe
   char *cfg = clv_dump_settings(self->clv_online);
   if (cfg) {
@@ -392,18 +393,7 @@ restore(LV2_Handle                  instance,
     clv_configure(self->clv_offline, "convolution.ir.file", path);
   }
 
-#if 0
-  if (clv_initialize(self->clv_offline, self->rate,
-	/*num in channels*/ 1,
-	/*num out channels*/ 1,
-	/*64 <= buffer-size <=4096*/ self->bufsize));
-
-  LV2convolv *old  = self->clv_online;
-  self->clv_online  = self->clv_offline;
-  self->clv_offline = old;
-#else
-  self->bufsize = 0; // kick worker thread in next run cb -> notifies UI, too
-#endif
+  self->bufsize = 0; // kick worker thread in next run cb -> notifies UI
   return LV2_STATE_SUCCESS;
 }
 
