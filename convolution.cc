@@ -33,6 +33,8 @@
  *  5B) clv_free(); // -> The End
  */
 
+#define NOGUIFORASSIGNMENTS 1 // hack currently there is no UI for assigning channels - this allows 1->1, 2->2, 2->2(true stereo)
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -55,10 +57,11 @@ struct LV2convolv {
 
   /* IR file */
   char *ir_fn; ///< path to IR file
-  unsigned int ir_map[MAX_CHANNEL_MAPS]; ///< I/O channel map: ir_map[out-channel] = in-channel ; out-channel: 0..N-1, in-channel: 0..N-1
-  unsigned int ir_chan[MAX_CHANNEL_MAPS]; ///< IR channel map: ir_chan[out-channel] = file-channel; out-channel: 0..N-1, file-channel: 1..M
-  unsigned int ir_delay[MAX_CHANNEL_MAPS]; ///< delay for each out-chanel; out-channel: 0..N-1, value >=0
-  float ir_gain[MAX_CHANNEL_MAPS]; ///< IR-gain for each out-channel; out-channel: 0..N-1, value: float -inf..+inf
+  unsigned int chn_inp[MAX_CHANNEL_MAPS]; ///< I/O channel map: ir_map[id] = in-channel ;
+  unsigned int chn_out[MAX_CHANNEL_MAPS]; ///< I/O channel map: ir_map[id] = out-channel ;
+  unsigned int ir_chan[MAX_CHANNEL_MAPS]; ///< IR channel map: ir_chan[id] = file-channel;
+  unsigned int ir_delay[MAX_CHANNEL_MAPS]; ///< pre-delay ; value >=0
+  float ir_gain[MAX_CHANNEL_MAPS]; ///< IR-gain value: float -inf..+inf
 
   /* convolution settings*/
   unsigned int size; ///< max length of convolution computation
@@ -170,7 +173,13 @@ LV2convolv *clv_alloc() {
   clv->convproc = NULL;
   for (i=0;i<MAX_CHANNEL_MAPS; i++) {
     clv->ir_chan[i]   = i+1;
-    clv->ir_map[i]    = i+1;
+#ifndef NOGUIFORASSIGNMENTS
+    clv->chn_inp[i]   = i+1;
+    clv->chn_out[i]   = i+1;
+#else
+    clv->chn_inp[i]   = (i%2)+1;
+    clv->chn_out[i]   = ((i+i/2)%2)+1;
+#endif
     clv->ir_delay[i]  = 0;
     clv->ir_gain[i]   = 0.5;
   }
@@ -178,6 +187,7 @@ LV2convolv *clv_alloc() {
 
   clv->density = 0.0;
   clv->size = 204800;
+  //fprintf(stderr,"%s", clv_dump_settings(clv));
   return clv;
 }
 
@@ -215,24 +225,29 @@ int clv_configure (LV2convolv *clv, const char *key, const char *value) {
     free(clv->ir_fn);
     clv->ir_fn = strdup(value);
   } else if (!strncasecmp (key, (char*)"convolution.out.source.", 23)) {
-    if (sscanf (key, (char*)"convolution.out.source.%d", &n) == 1) {
+    if (sscanf (key, (char*)"convolution.source.%d", &n) == 1) {
       if ((0 < n) && (n <= MAX_CHANNEL_MAPS))
-	clv->ir_map[n-1] = atoi(value);
+	clv->chn_inp[n] = atoi(value);
+    }
+  } else if (!strncasecmp (key, (char*)"convolution.out.source.", 23)) {
+    if (sscanf (key, (char*)"convolution.output.%d", &n) == 1) {
+      if ((0 <= n) && (n < MAX_CHANNEL_MAPS))
+	clv->chn_out[n] = atoi(value);
     }
   } else if (!strncasecmp (key, (char*)"convolution.ir.channel.", 23)) {
     if (sscanf (key, (char*)"convolution.ir.channel.%d", &n) == 1) {
-      if ((0 < n) && (n <= MAX_CHANNEL_MAPS))
-	clv->ir_chan[n-1] = atoi(value);
+      if ((0 <= n) && (n < MAX_CHANNEL_MAPS))
+	clv->ir_chan[n] = atoi(value);
     }
   } else if (!strncasecmp (key, (char*)"convolution.ir.gain.", 20)) {
     if (sscanf (key, (char*)"convolution.ir.gain.%d", &n) == 1) {
-      if ((0 < n) && (n <= MAX_CHANNEL_MAPS))
-	clv->ir_gain[n-1] = atof(value);
+      if ((0 <= n) && (n < MAX_CHANNEL_MAPS))
+	clv->ir_gain[n] = atof(value);
     }
   } else if (!strncasecmp (key, (char*)"convolution.ir.delay.", 21)) {
     if (sscanf (key, (char*)"convolution.ir.delay.%d", &n) == 1) {
-      if ((0 < n) && (n <= MAX_CHANNEL_MAPS))
-	clv->ir_delay[n-1] = atoi(value);
+      if ((0 <= n) && (n < MAX_CHANNEL_MAPS))
+	clv->ir_delay[n] = atoi(value);
     }
   } else if (strcasecmp (key, (char*)"convolution.size") == 0) {
     clv->size = atoi(value);
@@ -253,10 +268,11 @@ char *clv_dump_settings (LV2convolv *clv) {
 
   // TODO use snprintf (MAX_SIZE - off)
   for (i=0;i<MAX_CHANNEL_MAPS;i++) {
-    off+= sprintf(rv + off, "convolution.ir.gain.%d=%f\n", i+1, clv->ir_gain[i]);
-    off+= sprintf(rv + off, "convolution.ir.delay.%d=%d\n", i+1, clv->ir_delay[i]);
-    off+= sprintf(rv + off, "convolution.ir.channel.%d=%d\n", i+1, clv->ir_chan[i]);
-    off+= sprintf(rv + off, "convolution.out.source.%d=%d\n", i+1, clv->ir_map[i]);
+    off+= sprintf(rv + off, "convolution.ir.gain.%d=%f\n",  i, clv->ir_gain[i]);
+    off+= sprintf(rv + off, "convolution.ir.delay.%d=%d\n", i, clv->ir_delay[i]);
+    off+= sprintf(rv + off, "convolution.ir.channel.%d=%d\n", i, clv->ir_chan[i]);
+    off+= sprintf(rv + off, "convolution.source.%d=%d\n", i, clv->chn_inp[i]);
+    off+= sprintf(rv + off, "convolution.output.%d=%d\n", i, clv->chn_out[i]);
   }
   off+= sprintf(rv + off, "convolution.size=%u\n", clv->size);
   off+= sprintf(rv + off, "convolution.ir.file=%s\n", clv->ir_fn?clv->ir_fn:"");
@@ -350,18 +366,22 @@ int clv_initialize (
       in_channel_cnt, out_channel_cnt, nchan, nfram);
 
   for (c=0; c < MAX_CHANNEL_MAPS; c++) {
-    if (clv->ir_map[c]==0 || clv->ir_map[c] > in_channel_cnt) break;
+    if (clv->chn_inp[c]==0 || clv->chn_inp[c] > in_channel_cnt) break;
+
+#ifdef NOGUIFORASSIGNMENTS
+    if (c >= nchan && c>1) break; // XXX temp hack, -- XXX should be removed once UI assignments are possible
+#endif
 
     if (clv->ir_chan[c] > nchan || clv->ir_chan[c] < 1) {
       fprintf(stderr, "convoLV2: invalid IR-file channel assigned; expected: 1 <= %d <= %d\n", clv->ir_chan[c], nchan);
-#if 0 // fail if assignment is incorrect -- XXX should be default once UI is done
+#ifndef NOGUIFORASSIGNMENTS // fail if assignment is incorrect
       free(p); free(gb);
       delete(clv->convproc);
       clv->convproc = NULL;
       return -1;
 #else
       clv->ir_chan[c] = ((clv->ir_chan[c]-1)%nchan)+1;
-      fprintf(stderr, "convoLV2: IR-file channel %d\n", clv->ir_chan[c]);
+      fprintf(stderr, "convoLV2: using IR-file channel %d\n", clv->ir_chan[c]);
 #endif
     }
     if (clv->ir_delay[c] < 0) {
@@ -373,17 +393,18 @@ int clv_initialize (
     }
 
     for (i=0; i < nfram; ++i) gb[i] = p[i*nchan + clv->ir_chan[c]-1] * clv->ir_gain[c];
+
     fprintf(stderr, "convoLV2: SET in %d -> out %d [IR chn:%d gain:%+.3f dly:%d]\n",
-	((clv->ir_map[c]-1)%in_channel_cnt) +1,
-	(c%out_channel_cnt) +1,
+	((clv->chn_inp[c]-1)%in_channel_cnt) +1,
+	((clv->chn_out[c]-1)%out_channel_cnt) +1,
 	clv->ir_chan[c],
 	clv->ir_gain[c],
 	clv->ir_delay[c]
 	);
     clv->convproc->impdata_create (
-	(clv->ir_map[c]-1)%in_channel_cnt,
-	c%out_channel_cnt, 1,
-	gb, clv->ir_delay[c], clv->ir_delay[c] + nfram);
+	(clv->chn_inp[c]-1)%in_channel_cnt,
+	(clv->chn_out[c]-1)%out_channel_cnt,
+	1, gb, clv->ir_delay[c], clv->ir_delay[c] + nfram);
   }
 
   free(gb);
