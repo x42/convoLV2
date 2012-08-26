@@ -24,6 +24,7 @@
 #include "convolution.h"
 
 #include "lv2/lv2plug.in/ns/lv2core/lv2.h"
+#include "lv2/lv2plug.in/ns/ext/state/state.h"
 #include "lv2/lv2plug.in/ns/ext/worker/worker.h"
 
 #include "./uris.h"
@@ -135,9 +136,7 @@ work(LV2_Handle                  instance,
     const LV2_Atom_Object* obj = (const LV2_Atom_Object*) data;
     ConvoLV2URIs* uris = &self->uris;
 
-    if (obj->body.otype == uris->irfile_load) {
-    fprintf(stderr, "DEBUG LOAD\n");
-#if 1
+    if (obj->body.otype == uris->clv2_load_ir) {
       const LV2_Atom* file_path = read_set_file(uris, obj);
       if (file_path) {
 	const char *fn = (char*)(file_path+1);
@@ -145,7 +144,6 @@ work(LV2_Handle                  instance,
 	clv_configure(self->clv_offline, "convolution.ir.file", fn);
 	apply = 1;
       }
-#endif
     } else {
       fprintf(stderr, "Unknown message/object type %d\n", obj->body.otype);
     }
@@ -179,7 +177,7 @@ work_response(LV2_Handle  instance,
     lv2_atom_forge_frame_time(&self->forge, 0);
     write_set_file(&self->forge, &self->uris, fn);
   }
-#if 0 // DEBUG
+#if 0 // DEBUG -- not rt-safe
   char *cfg = clv_dump_settings(self->clv_online);
   if (cfg) {
     lv2_atom_forge_frame_time(&self->forge, 0);
@@ -270,12 +268,123 @@ cleanup(LV2_Handle instance)
   free(instance);
 }
 
+static LV2_State_Status
+save(LV2_Handle                instance,
+     LV2_State_Store_Function  store,
+     LV2_State_Handle          handle,
+     uint32_t                  flags,
+     const LV2_Feature* const* features)
+{
+  int i;
+  convoLV2* self = (convoLV2*)instance;
+  LV2_State_Map_Path* map_path = NULL;
+
+  char *cfg = clv_dump_settings(self->clv_online);
+  if (cfg) {
+    store(handle, self->uris.clv2_settings,
+	cfg, strlen(cfg) + 1,
+	self->uris.atom_String,
+	LV2_STATE_IS_POD | LV2_STATE_IS_PORTABLE);
+    free(cfg);
+  }
+
+  for (i=0; features[i]; ++i) {
+    if (!strcmp(features[i]->URI, LV2_STATE__mapPath)) {
+    map_path = (LV2_State_Map_Path*)features[i]->data;
+    }
+  }
+
+  if (map_path) {
+    char fn[1024];
+    clv_query_setting(self->clv_online, "convolution.ir.file", fn, 1024);
+    char* apath = map_path->abstract_path(map_path->handle, fn);
+
+    store(handle, self->uris.clv2_file,
+	apath, strlen(apath) + 1,
+	self->uris.atom_Path,
+	LV2_STATE_IS_POD | LV2_STATE_IS_PORTABLE);
+
+    free(apath);
+  }
+  return LV2_STATE_SUCCESS;
+}
+
+static LV2_State_Status
+restore(LV2_Handle                  instance,
+        LV2_State_Retrieve_Function retrieve,
+        LV2_State_Handle            handle,
+        uint32_t                    flags,
+        const LV2_Feature* const*   features)
+{
+  convoLV2* self = (convoLV2*)instance;
+  size_t   size;
+  uint32_t type;
+  uint32_t valflags;
+
+  /* prepare new engine instance */
+  if (!self->clv_offline) {
+    fprintf(stderr, "allocate offline instance\n");
+    self->clv_offline = clv_alloc();
+
+    if (!self->clv_offline) {
+      return LV2_STATE_ERR_UNKNOWN; // OOM
+    }
+  }
+
+  const void* value = retrieve(handle, self->uris.clv2_settings, &size, &type, &valflags);
+
+  if (value) {
+    const char* cfg = (const char*)value;
+    const char *te,*ts = cfg;
+    while (ts && *ts && (te=strchr(ts, '\n'))) {
+      char *val;
+      char kv[1024];
+      memcpy(kv, ts, te-ts);
+      kv[te-ts]=0;
+      fprintf(stderr, "CFG: %s\n", kv);
+      if((val=strchr(kv,'='))) {
+	*val=0;
+	clv_configure(self->clv_offline, kv, val+1);
+      }
+      ts=te+1;
+    }
+  }
+
+  value = retrieve(handle, self->uris.clv2_file, &size, &type, &valflags);
+
+  if (value) {
+    const char* path = (const char*)value;
+    clv_configure(self->clv_offline, "convolution.ir.file", path);
+  }
+
+#if 0
+  if (clv_initialize(self->clv_offline, self->rate,
+	/*num in channels*/ 1,
+	/*num out channels*/ 1,
+	/*64 <= buffer-size <=4096*/ self->bufsize));
+
+  LV2convolv *old  = self->clv_online;
+  self->clv_online  = self->clv_offline;
+  self->clv_offline = old;
+#else
+  self->bufsize = 0; // kick worker thread in next run cb -> notifies UI, too
+#endif
+  return LV2_STATE_SUCCESS;
+}
+
+
+
+
 const void*
 extension_data(const char* uri)
 {
   static const LV2_Worker_Interface worker = { work, work_response, NULL };
+  static const LV2_State_Interface  state  = { save, restore };
   if (!strcmp(uri, LV2_WORKER__interface)) {
     return &worker;
+  }
+  else if (!strcmp(uri, LV2_STATE__interface)) {
+    return &state;
   }
   return NULL;
 }
