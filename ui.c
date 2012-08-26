@@ -58,7 +58,7 @@ on_load_clicked(GtkWidget* widget,
 
 	LV2_Atom* msg = write_set_file(&ui->forge, &ui->uris, filename);
 
-	ui->write(ui->controller, 2, lv2_atom_total_size(msg),
+	ui->write(ui->controller, 0, lv2_atom_total_size(msg),
 	          ui->uris.atom_eventTransfer,
 	          msg);
 

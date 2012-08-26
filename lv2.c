@@ -31,14 +31,19 @@
 
 #define MAX_CHN (2)
 
+#ifndef MAX
+#define MAX(a,b) ( ((a)<(b))?(b):(a) )
+#endif
+
 typedef enum {
-  P_INPUT      = 0,
-  P_OUTPUT     = 1,
-  P_CONTROL    = 2,
-  P_NOTIFY     = 3,
+  P_CONTROL    = 0,
+  P_NOTIFY     = 1,
+
+  P_INPUT0     = 2,
+  P_OUTPUT0    = 3,
 // variants only
-  P_INPUT2     = 4,
-  P_OUTPUT2    = 5,
+  P_INPUT1     = 4,
+  P_OUTPUT1    = 5,
 } PortIndex;
 
 enum {
@@ -213,6 +218,15 @@ work_response(LV2_Handle  instance,
   return LV2_WORKER_SUCCESS;
 }
 
+#define IOPORT(i) \
+    case P_INPUT ## i: \
+      self->input[i] = (float*)data; \
+      self->chn_in = MAX(self->chn_in,i+1); \
+      break; \
+    case P_OUTPUT ## i: \
+      self->output[i] = (float*)data; \
+      self->chn_out = MAX(self->chn_out,i+1); \
+      break;
 
 static void
 connect_port(LV2_Handle instance,
@@ -222,20 +236,8 @@ connect_port(LV2_Handle instance,
   convoLV2* self = (convoLV2*)instance;
 
   switch ((PortIndex)port) {
-    case P_INPUT:
-      self->input[0] = (float*)data;
-      break;
-    case P_OUTPUT:
-      self->output[0] = (float*)data;
-      break;
-    case P_INPUT2:
-      self->input[1] = (float*)data;
-      self->chn_in = 2;
-      break;
-    case P_OUTPUT2:
-      self->output[1] = (float*)data;
-      self->chn_out = 2;
-      break;
+    IOPORT(0)
+    IOPORT(1)
     case P_CONTROL:
       self->control_port = (const LV2_Atom_Sequence*)data;
       break;
@@ -253,6 +255,7 @@ run(LV2_Handle instance, uint32_t n_samples)
   const float *input[MAX_CHN];
   float *output[MAX_CHN];
   int i;
+
   for (i=0; i < self->chn_in; i++ ) {
     input[i] = self->input[i];
   }
