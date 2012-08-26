@@ -29,21 +29,27 @@
 
 #include "./uris.h"
 
-#define MAX_CHN (2)
-
 #ifndef MAX
 #define MAX(a,b) ( ((a)<(b))?(b):(a) )
 #endif
+
+/* note: when whaning this, update MAX_CHANNEL_MAPS in convolution.h to (MAX_CHN * MAX_CHN) */
+#define MAX_CHN (2)
+/* loop MACRO from 0 .. MAX_CHN */
+#define LOOP_DEFINE_PORTS(def) \
+  def(0) \
+  def(1)
+
+
+#define ENUMPORT(n) \
+  P_INPUT ## n = (n*2+2), \
+  P_OUTPUT ## n = (n*2+3),
 
 typedef enum {
   P_CONTROL    = 0,
   P_NOTIFY     = 1,
 
-  P_INPUT0     = 2,
-  P_OUTPUT0    = 3,
-// variants only
-  P_INPUT1     = 4,
-  P_OUTPUT1    = 5,
+  LOOP_DEFINE_PORTS(ENUMPORT)
 } PortIndex;
 
 enum {
@@ -236,8 +242,7 @@ connect_port(LV2_Handle instance,
   convoLV2* self = (convoLV2*)instance;
 
   switch ((PortIndex)port) {
-    IOPORT(0)
-    IOPORT(1)
+    LOOP_DEFINE_PORTS(IOPORT)
     case P_CONTROL:
       self->control_port = (const LV2_Atom_Sequence*)data;
       break;
