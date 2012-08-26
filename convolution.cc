@@ -354,7 +354,7 @@ int clv_initialize (
 
     if (clv->ir_chan[c] > nchan || clv->ir_chan[c] < 1) {
       fprintf(stderr, "convoLV2: invalid IR-file channel assigned; expected: 1 <= %d <= %d\n", clv->ir_chan[c], nchan);
-#if 0
+#if 0 // fail if assignment is incorrect -- XXX should be default once UI is done
       free(p); free(gb);
       delete(clv->convproc);
       clv->convproc = NULL;
@@ -380,7 +380,10 @@ int clv_initialize (
 	clv->ir_gain[c],
 	clv->ir_delay[c]
 	);
-    clv->convproc->impdata_create ((clv->ir_map[c]-1)%in_channel_cnt, c%out_channel_cnt, 1, gb, clv->ir_delay[c], clv->ir_delay[c] + nfram);
+    clv->convproc->impdata_create (
+	(clv->ir_map[c]-1)%in_channel_cnt,
+	c%out_channel_cnt, 1,
+	gb, clv->ir_delay[c], clv->ir_delay[c] + nfram);
   }
 
   free(gb);
@@ -399,12 +402,6 @@ int clv_initialize (
   }
 
   return 0;
-}
-
-void copy_input_to_output(const float * const * inbuf, float * const * outbuf, size_t n_channels, size_t n_samples) {
-  unsigned int c;
-  for (c=0; c < n_channels; ++c)
-    memcpy(outbuf[c], inbuf[c], n_samples * sizeof(float));
 }
 
 void silent_output(float * const * outbuf, size_t n_channels, size_t n_samples) {
@@ -438,7 +435,7 @@ int clv_convolve (LV2convolv *clv, const float * const * inbuf, float * const * 
   if (clv->convproc->state () != Convproc::ST_PROC) {
     /* Note this will actually never happen in sync-mode */
     fprintf(stderr, "fons br0ke libzita-resampler :)\n");
-    copy_input_to_output(inbuf, outbuf, n_channels, n_samples);
+    silent_output(outbuf, n_channels, n_samples);
     return (n_samples);
   }
 
@@ -459,7 +456,7 @@ int clv_convolve (LV2convolv *clv, const float * const * inbuf, float * const * 
   if (f /*&Convproc::FL_LOAD)*/ ) {
     /* Note this will actually never happen in sync-mode */
     fprintf(stderr, "fons br0ke libzita-resampler :).\n");
-    copy_input_to_output(inbuf, outbuf, n_channels, n_samples);
+    silent_output(outbuf, n_channels, n_samples);
     return (n_samples);
   }
 

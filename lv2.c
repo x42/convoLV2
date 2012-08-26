@@ -29,11 +29,16 @@
 
 #include "./uris.h"
 
+#define MAX_CHN (2)
+
 typedef enum {
   P_INPUT      = 0,
   P_OUTPUT     = 1,
   P_CONTROL    = 2,
   P_NOTIFY     = 3,
+// variants only
+  P_INPUT2     = 4,
+  P_OUTPUT2    = 5,
 } PortIndex;
 
 enum {
@@ -47,8 +52,8 @@ typedef struct {
 
   LV2_Atom_Forge forge;
 
-  float* input;
-  float* output;
+  float* input[MAX_CHN];
+  float* output[MAX_CHN];
   const LV2_Atom_Sequence* control_port;
   LV2_Atom_Sequence*       notify_port;
 
@@ -61,6 +66,8 @@ typedef struct {
   int bufsize;
   int rate;
   int reinit_in_progress;
+  int chn_in;
+  int chn_out;
 
 } convoLV2;
 
@@ -100,6 +107,8 @@ instantiate(const LV2_Descriptor*     descriptor,
 
   self->bufsize = 1024;
   self->rate = rate;
+  self->chn_in = 1;
+  self->chn_out = 1;
   self->reinit_in_progress = 0;
   self->clv_online = NULL;
   self->clv_offline = NULL;
@@ -138,12 +147,8 @@ work(LV2_Handle                  instance,
 	break;
       case CMD_FREE:
 	fprintf(stderr, "free offline instance\n");
-#if 1
-	clv_release(self->clv_offline);
-#else   // save a tiny bit of memory
 	clv_free(self->clv_offline);
 	self->clv_offline=NULL;
-#endif
 	break;
     }
   } else {
@@ -166,8 +171,7 @@ work(LV2_Handle                  instance,
 
   if (apply) {
     if (clv_initialize(self->clv_offline, self->rate,
-	  /*num in channels*/ 1,
-	  /*num out channels*/ 1,
+	  self->chn_in, self->chn_out,
 	  /*64 <= buffer-size <=4096*/ self->bufsize));
     //respond(handle, sizeof(self->clv_offline), &self->clv_offline);
     respond(handle, 0, NULL);
@@ -218,10 +222,18 @@ connect_port(LV2_Handle instance,
 
   switch ((PortIndex)port) {
     case P_INPUT:
-      self->input = (float*)data;
+      self->input[0] = (float*)data;
       break;
     case P_OUTPUT:
-      self->output = (float*)data;
+      self->output[0] = (float*)data;
+      break;
+    case P_INPUT2:
+      self->input[1] = (float*)data;
+      self->chn_in = 2;
+      break;
+    case P_OUTPUT2:
+      self->output[1] = (float*)data;
+      self->chn_out = 2;
       break;
     case P_CONTROL:
       self->control_port = (const LV2_Atom_Sequence*)data;
@@ -237,11 +249,15 @@ run(LV2_Handle instance, uint32_t n_samples)
 {
   convoLV2* self = (convoLV2*)instance;
 
-  const float *input[1];
-  float *output[1];
-  // TODO -- assign channels depending on variant.
-  input[0] = self->input;
-  output[0] = self->output;
+  const float *input[MAX_CHN];
+  float *output[MAX_CHN];
+  int i;
+  for (i=0; i < self->chn_in; i++ ) {
+    input[i] = self->input[i];
+  }
+  for (i=0; i < self->chn_out; i++ ) {
+    output[i] = self->output[i];
+  }
 
   /* Set up forge to write directly to notify output port. */
   const uint32_t notify_capacity = self->notify_port->atom.size;
@@ -274,7 +290,7 @@ run(LV2_Handle instance, uint32_t n_samples)
     }
   }
 
-  clv_convolve(self->clv_online, input, output, /*num channels*/1, n_samples);
+  clv_convolve(self->clv_online, input, output, self->chn_out, n_samples);
 }
 
 static void
@@ -408,8 +424,19 @@ extension_data(const char* uri)
   return NULL;
 }
 
-static const LV2_Descriptor descriptor = {
+static const LV2_Descriptor descriptor0 = {
   CONVOLV2_URI,
+  instantiate,
+  connect_port,
+  NULL, // activate,
+  run,
+  NULL, // deactivate,
+  cleanup,
+  extension_data
+};
+
+static const LV2_Descriptor descriptor1 = {
+  CONVOLV2_URI "Stereo",
   instantiate,
   connect_port,
   NULL, // activate,
@@ -425,7 +452,9 @@ lv2_descriptor(uint32_t index)
 {
   switch (index) {
   case 0:
-    return &descriptor;
+    return &descriptor0;
+  case 1:
+    return &descriptor1;
   default:
     return NULL;
   }
