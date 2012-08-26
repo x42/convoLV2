@@ -43,6 +43,7 @@ extern int clv_convolve (LV2convolv *clv, const float * const * inbuf, float * c
 
 int clv_query_setting (LV2convolv *clv, const char *key, char *value, size_t val_max_len);
 char *clv_dump_settings (LV2convolv *clv);
+int clv_is_active (LV2convolv *clv);
 
 #ifdef __cplusplus
 }

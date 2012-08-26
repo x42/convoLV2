@@ -264,26 +264,34 @@ char *clv_dump_settings (LV2convolv *clv) {
   if (!clv) return NULL;
   int i;
   size_t off = 0;
-  char *rv = (char*) malloc(2048 * sizeof (char)); // TODO calc size
+#define MAX_CFG_SIZE ( MAX_CHANNEL_MAPS * 158 + 50 + (clv->ir_fn?strlen(clv->ir_fn):0) )
+  char *rv = (char*) malloc(MAX_CFG_SIZE * sizeof (char));
 
-  // TODO use snprintf (MAX_SIZE - off)
   for (i=0;i<MAX_CHANNEL_MAPS;i++) {
-    off+= sprintf(rv + off, "convolution.ir.gain.%d=%f\n",  i, clv->ir_gain[i]);
-    off+= sprintf(rv + off, "convolution.ir.delay.%d=%d\n", i, clv->ir_delay[i]);
-    off+= sprintf(rv + off, "convolution.ir.channel.%d=%d\n", i, clv->ir_chan[i]);
-    off+= sprintf(rv + off, "convolution.source.%d=%d\n", i, clv->chn_inp[i]);
-    off+= sprintf(rv + off, "convolution.output.%d=%d\n", i, clv->chn_out[i]);
+    // f=12 ; d= 3 ; v=10
+    off+= sprintf(rv + off, "convolution.ir.gain.%d=%e\n",    i, clv->ir_gain[i]); // 22 + d + f
+    off+= sprintf(rv + off, "convolution.ir.delay.%d=%d\n",   i, clv->ir_delay[i]);// 23 + d + v
+    off+= sprintf(rv + off, "convolution.ir.channel.%d=%d\n", i, clv->ir_chan[i]); // 25 + d + d
+    off+= sprintf(rv + off, "convolution.source.%d=%d\n",     i, clv->chn_inp[i]); // 21 + d + d
+    off+= sprintf(rv + off, "convolution.output.%d=%d\n",     i, clv->chn_out[i]); // 21 + d + d
   }
-  off+= sprintf(rv + off, "convolution.size=%u\n", clv->size);
-  off+= sprintf(rv + off, "convolution.ir.file=%s\n", clv->ir_fn?clv->ir_fn:"");
+  off+= sprintf(rv + off, "convolution.size=%u\n", clv->size);                     // 18 + v
+  off+= sprintf(rv + off, "convolution.ir.file=%s\n", clv->ir_fn?clv->ir_fn:"");   // 21 + s
+  fprintf(stderr, "%d / %d \n", off, MAX_CFG_SIZE);
   return rv;
 }
 
 int clv_query_setting (LV2convolv *clv, const char *key, char *value, size_t val_max_len) {
   int rv = 0;
   if (!clv || !value || !key) return -1;
+
   if (strcasecmp (key, (char*)"convolution.ir.file") == 0) {
-    rv=snprintf(value, val_max_len, "%s", clv->ir_fn);
+    if (clv->ir_fn) {
+      if (strlen(clv->ir_fn) >= val_max_len)
+	rv = -1;
+      else
+	rv=snprintf(value, val_max_len, "%s", clv->ir_fn);
+    }
   }
   // TODO allow querying other settings
   return rv;
@@ -423,6 +431,13 @@ int clv_initialize (
   }
 
   return 0;
+}
+
+int clv_is_active (LV2convolv *clv) {
+  if (!clv || !clv->convproc) {
+    return 0;
+  }
+  return 1;
 }
 
 void silent_output(float * const * outbuf, size_t n_channels, size_t n_samples) {

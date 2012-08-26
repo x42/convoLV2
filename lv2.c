@@ -206,7 +206,10 @@ work_response(LV2_Handle  instance,
     lv2_atom_forge_frame_time(&self->forge, 0);
     write_set_file(&self->forge, &self->uris, fn);
   }
-  // TODO: notify GUI if cfg was successful || if convolution is running (check clv->clv_online->convproc != NULL )
+
+  // TODO: notify GUI if convolution is running:
+  // clv_is_active(clv->clv_online) == 1 if it is
+  // TODO: also send plugin channel-counts and convolution configuration to GUI
 
 #if 0 // DEBUG -- not rt-safe
   char *cfg = clv_dump_settings(self->clv_online);
@@ -338,16 +341,15 @@ save(LV2_Handle                instance,
   }
 
   if (map_path) {
-    char fn[1024];
-    clv_query_setting(self->clv_online, "convolution.ir.file", fn, 1024);
-    char* apath = map_path->abstract_path(map_path->handle, fn);
-
-    store(handle, self->uris.clv2_file,
-	apath, strlen(apath) + 1,
-	self->uris.atom_Path,
-	LV2_STATE_IS_POD | LV2_STATE_IS_PORTABLE);
-
-    free(apath);
+    char fn[1024]; // PATH_MAX
+    if (clv_query_setting(self->clv_online, "convolution.ir.file", fn, 1024) > 0 ) {
+      char* apath = map_path->abstract_path(map_path->handle, fn);
+      store(handle, self->uris.clv2_file,
+	  apath, strlen(apath) + 1,
+	  self->uris.atom_Path,
+	  LV2_STATE_IS_POD | LV2_STATE_IS_PORTABLE);
+      free(apath);
+    }
   }
   return LV2_STATE_SUCCESS;
 }
