@@ -11,8 +11,7 @@ Currently it is in early Alpha development stage and used to prototype
 LV2 config-options extension.
 
 The plugin works properly, but it is not [yet] possible to
-*   change the IR file or configuration settings (gain, delay, channel-map)
-    currently `/tmp/example_ir-48k.wav` is hardcoded, gain 0.5, no delay, channel 1
+*   change the configuration settings (gain, delay, channel-map)
 
 Installation & Usage
 --------------------
