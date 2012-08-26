@@ -346,18 +346,23 @@ int clv_initialize (
     return -1;
   }
 
-  fprintf (stderr, "convoLV2: %din, %dout | IR: %dchn, %dsamples\n",
+  fprintf (stderr, "convoLV2: CFG %din, %dout | IR: %dchn, %dsamples\n",
       in_channel_cnt, out_channel_cnt, nchan, nfram);
 
   for (c=0; c < MAX_OUTPUT_CHANNELS; c++) {
     if (clv->ir_map[c]==0 || clv->ir_map[c] > in_channel_cnt) break;
 
     if (clv->ir_chan[c] > nchan || clv->ir_chan[c] < 1) {
-      fprintf(stderr, "convoLV2: invalid channel in IR file; expected: 1 <= %d <= %d\n", clv->ir_chan[c], nchan);
+      fprintf(stderr, "convoLV2: invalid IR-file channel assigned; expected: 1 <= %d <= %d\n", clv->ir_chan[c], nchan);
+#if 0
       free(p); free(gb);
       delete(clv->convproc);
       clv->convproc = NULL;
       return -1;
+#else
+      clv->ir_chan[c] = ((clv->ir_chan[c]-1)%nchan)+1;
+      fprintf(stderr, "convoLV2: IR-file channel %d\n", clv->ir_chan[c]);
+#endif
     }
     if (clv->ir_delay[c] < 0) {
       fprintf(stderr, "convoLV2: invalid delay; expected: 0 <= %d\n", clv->ir_delay[c]);
@@ -368,7 +373,7 @@ int clv_initialize (
     }
 
     for (i=0; i < nfram; ++i) gb[i] = p[i*nchan + clv->ir_chan[c]-1] * clv->ir_gain[c];
-    fprintf(stderr, "convoLV2: in %d -> out %d [IR chn:%d gain:%+.3f dly:%d]\n",
+    fprintf(stderr, "convoLV2: SET in %d -> out %d [IR chn:%d gain:%+.3f dly:%d]\n",
 	((clv->ir_map[c]-1)%in_channel_cnt) +1,
 	(c%out_channel_cnt) +1,
 	clv->ir_chan[c],
