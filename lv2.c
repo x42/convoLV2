@@ -36,6 +36,11 @@ typedef enum {
   P_NOTIFY     = 3,
 } PortIndex;
 
+enum {
+  CMD_APPLY    = 0,
+  CMD_FREE     = 1,
+};
+
 typedef struct {
   LV2_URID_Map*        map;
   LV2_Worker_Schedule *schedule;
@@ -125,12 +130,22 @@ work(LV2_Handle                  instance,
     clv_clone_settings(self->clv_offline, self->clv_online);
   }
 
-  if (size == 0) {
-    /* simple swap instances with newly created one
-     * this is used to simply update buffersize
-     */
-    apply = 1;
-
+  if (size == sizeof(int)) {
+    switch(*((int*)data)) {
+      case CMD_APPLY:
+	fprintf(stderr, "apply offline instance\n");
+	apply = 1;
+	break;
+      case CMD_FREE:
+	fprintf(stderr, "free offline instance\n");
+#if 1
+	clv_release(self->clv_offline);
+#else   // save a tiny bit of memory
+	clv_free(self->clv_offline);
+	self->clv_offline=NULL;
+#endif
+	break;
+    }
   } else {
     /* handle message described in Atom */
     const LV2_Atom_Object* obj = (const LV2_Atom_Object*) data;
@@ -140,7 +155,7 @@ work(LV2_Handle                  instance,
       const LV2_Atom* file_path = read_set_file(uris, obj);
       if (file_path) {
 	const char *fn = (char*)(file_path+1);
-	fprintf(stderr, "load %s\n", fn);
+	fprintf(stderr, "load IR %s\n", fn);
 	clv_configure(self->clv_offline, "convolution.ir.file", fn);
 	apply = 1;
       }
@@ -185,6 +200,9 @@ work_response(LV2_Handle  instance,
     free(cfg);
   }
 #endif
+
+  int d = CMD_FREE;
+  self->schedule->schedule_work(self->schedule->handle, sizeof(int), &d);
 
   self->reinit_in_progress = 0;
   return LV2_WORKER_SUCCESS;
@@ -251,8 +269,8 @@ run(LV2_Handle instance, uint32_t n_samples)
     if (!self->reinit_in_progress) {
       self->reinit_in_progress = 1;
       self->bufsize = n_samples;
-      self->schedule->schedule_work(self->schedule->handle, 0, NULL);
-      //self = (convoLV2*)instance;
+      int d = CMD_APPLY;
+      self->schedule->schedule_work(self->schedule->handle, sizeof(int), &d);
     }
   }
 
