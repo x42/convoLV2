@@ -4,7 +4,7 @@
 @prefix lv2:   <http://lv2plug.in/ns/lv2core#> .
 @prefix state: <http://lv2plug.in/ns/ext/state#> .
 @prefix ui:    <http://lv2plug.in/ns/extensions/ui#> .
-@prefix urid:  <http://lv2plug.in/ns/ext/urid#> . 
+@prefix urid:  <http://lv2plug.in/ns/ext/urid#> .
 @prefix work:  <http://lv2plug.in/ns/ext/worker#> .
 
 <http://gareus.org/>
@@ -47,14 +47,14 @@
 		lv2:name "Control"
 	],
 	[
-		a atom:AtomPort, 
+		a atom:AtomPort,
 			lv2:OutputPort ;
 		atom:bufferType atom:Sequence ;
 		atom:supports <http://lv2plug.in/ns/ext/patch#Message> ;
 		lv2:index 3 ;
 		lv2:symbol "notify" ;
 		lv2:name "Notify"
-	] 
+	]
 	.
 
 
