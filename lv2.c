@@ -354,6 +354,7 @@ restore(LV2_Handle                  instance,
 
   if (value) {
     const char* path = (const char*)value;
+    fprintf(stderr, "PTH: convolution.ir.file=%s\n", path);
     clv_configure(self->clv_offline, "convolution.ir.file", path);
   }
 

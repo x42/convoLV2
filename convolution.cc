@@ -170,7 +170,7 @@ LV2convolv *clv_alloc() {
   clv->convproc = NULL;
   for (i=0;i<MAX_OUTPUT_CHANNELS; i++) {
     clv->ir_chan[i]   = i+1;
-    clv->ir_map[i]    = i;
+    clv->ir_map[i]    = i+1;
     clv->ir_delay[i]  = 0;
     clv->ir_gain[i]   = 0.5;
   }
@@ -217,7 +217,7 @@ int clv_configure (LV2convolv *clv, const char *key, const char *value) {
   } else if (!strncasecmp (key, (char*)"convolution.out.source.", 23)) {
     if (sscanf (key, (char*)"convolution.out.source.%d", &n) == 1) {
       if ((0 < n) && (n <= MAX_OUTPUT_CHANNELS))
-	clv->ir_map[n-1] = atoi(value) - 1;
+	clv->ir_map[n-1] = atoi(value);
     }
   } else if (!strncasecmp (key, (char*)"convolution.ir.channel.", 23)) {
     if (sscanf (key, (char*)"convolution.ir.channel.%d", &n) == 1) {
@@ -256,7 +256,7 @@ char *clv_dump_settings (LV2convolv *clv) {
     off+= sprintf(rv + off, "convolution.ir.gain.%d=%f\n", i+1, clv->ir_gain[i]);
     off+= sprintf(rv + off, "convolution.ir.delay.%d=%d\n", i+1, clv->ir_delay[i]);
     off+= sprintf(rv + off, "convolution.ir.channel.%d=%d\n", i+1, clv->ir_chan[i]);
-    off+= sprintf(rv + off, "convolution.out.source.%d=%d\n", i+1, clv->ir_map[i] + 1);
+    off+= sprintf(rv + off, "convolution.out.source.%d=%d\n", i+1, clv->ir_map[i]);
   }
   off+= sprintf(rv + off, "convolution.size=%u\n", clv->size);
   off+= sprintf(rv + off, "convolution.ir.file=%s\n", clv->ir_fn?clv->ir_fn:"");
@@ -346,7 +346,11 @@ int clv_initialize (
     return -1;
   }
 
-  for (c=0; c < MAX_OUTPUT_CHANNELS && c < out_channel_cnt; c++) {
+  fprintf (stderr, "convoLV2: %din, %dout | IR: %dchn, %dsamples\n",
+      in_channel_cnt, out_channel_cnt, nchan, nfram);
+
+  for (c=0; c < MAX_OUTPUT_CHANNELS; c++) {
+    if (clv->ir_map[c]==0 || clv->ir_map[c] > in_channel_cnt) break;
 
     if (clv->ir_chan[c] > nchan || clv->ir_chan[c] < 1) {
       fprintf(stderr, "convoLV2: invalid channel in IR file; expected: 1 <= %d <= %d\n", clv->ir_chan[c], nchan);
@@ -364,7 +368,14 @@ int clv_initialize (
     }
 
     for (i=0; i < nfram; ++i) gb[i] = p[i*nchan + clv->ir_chan[c]-1] * clv->ir_gain[c];
-    clv->convproc->impdata_create (clv->ir_map[c], c, 1, gb, clv->ir_delay[c], clv->ir_delay[c] + nfram);
+    fprintf(stderr, "convoLV2: in %d -> out %d [IR chn:%d gain:%+.3f dly:%d]\n",
+	((clv->ir_map[c]-1)%in_channel_cnt) +1,
+	(c%out_channel_cnt) +1,
+	clv->ir_chan[c],
+	clv->ir_gain[c],
+	clv->ir_delay[c]
+	);
+    clv->convproc->impdata_create ((clv->ir_map[c]-1)%in_channel_cnt, c%out_channel_cnt, 1, gb, clv->ir_delay[c], clv->ir_delay[c] + nfram);
   }
 
   free(gb);
