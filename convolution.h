@@ -21,7 +21,7 @@
 #define CONVOLUTION_H
 
 
-#define MAX_OUTPUT_CHANNELS (4)
+#define MAX_CHANNEL_MAPS (4)
 
 /* zita-convolver lib is C++ so we need extern "C" in order to link
  * functions using it. */

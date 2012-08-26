@@ -237,8 +237,8 @@ run(LV2_Handle instance, uint32_t n_samples)
 {
   convoLV2* self = (convoLV2*)instance;
 
-  const float *input[MAX_OUTPUT_CHANNELS];
-  float *output[MAX_OUTPUT_CHANNELS];
+  const float *input[1];
+  float *output[1];
   // TODO -- assign channels depending on variant.
   input[0] = self->input;
   output[0] = self->output;
