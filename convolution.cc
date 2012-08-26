@@ -217,7 +217,7 @@ int clv_configure (LV2convolv *clv, const char *key, const char *value) {
   } else if (!strncasecmp (key, (char*)"convolution.out.source.", 23)) {
     if (sscanf (key, (char*)"convolution.out.source.%d", &n) == 1) {
       if ((0 < n) && (n <= MAX_OUTPUT_CHANNELS))
-	clv->ir_map[n-1] = atoi(value);
+	clv->ir_map[n-1] = atoi(value) - 1;
     }
   } else if (!strncasecmp (key, (char*)"convolution.ir.channel.", 23)) {
     if (sscanf (key, (char*)"convolution.ir.channel.%d", &n) == 1) {
@@ -253,10 +253,10 @@ char *clv_dump_settings (LV2convolv *clv) {
 
   // TODO use snprintf (MAX_SIZE - off)
   for (i=0;i<MAX_OUTPUT_CHANNELS;i++) {
-    off+= sprintf(rv + off, "convolution.ir.gain.%d=%f\n", i, clv->ir_gain[i]);
-    off+= sprintf(rv + off, "convolution.ir.delay.%d=%d\n", i, clv->ir_delay[i]);
-    off+= sprintf(rv + off, "convolution.ir.channel.%d=%d\n", i, clv->ir_chan[i]);
-    off+= sprintf(rv + off, "convolution.out.source.%d=%d\n", i, clv->ir_map[i]);
+    off+= sprintf(rv + off, "convolution.ir.gain.%d=%f\n", i+1, clv->ir_gain[i]);
+    off+= sprintf(rv + off, "convolution.ir.delay.%d=%d\n", i+1, clv->ir_delay[i]);
+    off+= sprintf(rv + off, "convolution.ir.channel.%d=%d\n", i+1, clv->ir_chan[i]);
+    off+= sprintf(rv + off, "convolution.out.source.%d=%d\n", i+1, clv->ir_map[i] + 1);
   }
   off+= sprintf(rv + off, "convolution.size=%u\n", clv->size);
   off+= sprintf(rv + off, "convolution.ir.file=%s\n", clv->ir_fn?clv->ir_fn:"");
