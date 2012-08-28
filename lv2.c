@@ -184,7 +184,8 @@ work(LV2_Handle                  instance,
     if (!clv_initialize(self->clv_offline, self->rate,
 	  self->chn_in, self->chn_out,
 	  /*64 <= buffer-size <=4096*/ self->bufsize)) /*XXX*/ ; /* < respond anyway */
-    respond(handle, 0, NULL);
+    respond(handle, 1, ""); // must not be 0, A3 will ignore it.
+    //respond(handle, 0, NULL);
   }
   return LV2_WORKER_SUCCESS;
 }
