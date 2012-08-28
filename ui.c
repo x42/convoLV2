@@ -146,6 +146,20 @@ instantiate(const LV2UI_Descriptor*   descriptor,
 
 	*widget = ui->box;
 
+#if 1 //ask plugin about current state
+	uint8_t obj_buf[OBJ_BUF_SIZE];
+	lv2_atom_forge_set_buffer(&ui->forge, obj_buf, OBJ_BUF_SIZE);
+
+	LV2_Atom_Forge_Frame set_frame;
+	LV2_Atom* msg = (LV2_Atom*)lv2_atom_forge_blank(
+		&ui->forge, &set_frame, 1, ui->uris.clv2_uiinit);
+	lv2_atom_forge_pop(&ui->forge, &set_frame);
+
+	ui->write(ui->controller, 0, lv2_atom_total_size(msg),
+	          ui->uris.atom_eventTransfer,
+	          msg);
+#endif
+
 	return ui;
 }
 

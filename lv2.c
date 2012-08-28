@@ -190,17 +190,8 @@ work(LV2_Handle                  instance,
   return LV2_WORKER_SUCCESS;
 }
 
-static LV2_Worker_Status
-work_response(LV2_Handle  instance,
-              uint32_t    size,
-              const void* data)
-{
-  // swap engine instances
+static void inform_ui(LV2_Handle instance) {
   convoLV2* self = (convoLV2*)instance;
-  LV2convolv *old  = self->clv_online;
-  self->clv_online  = self->clv_offline;
-  self->clv_offline = old;
-
   // message to UI
   char fn[1024];
   if (clv_query_setting(self->clv_online, "convolution.ir.file", fn, 1024) > 0) {
@@ -220,6 +211,20 @@ work_response(LV2_Handle  instance,
     free(cfg);
   }
 #endif
+}
+
+static LV2_Worker_Status
+work_response(LV2_Handle  instance,
+              uint32_t    size,
+              const void* data)
+{
+  // swap engine instances
+  convoLV2* self = (convoLV2*)instance;
+  LV2convolv *old  = self->clv_online;
+  self->clv_online  = self->clv_offline;
+  self->clv_offline = old;
+
+  inform_ui(instance);
 
   int d = CMD_FREE;
   self->schedule->schedule_work(self->schedule->handle, sizeof(int), &d);
@@ -283,7 +288,13 @@ run(LV2_Handle instance, uint32_t n_samples)
 
   /* Read incoming events */
   LV2_ATOM_SEQUENCE_FOREACH(self->control_port, ev) {
-    self->schedule->schedule_work(self->schedule->handle, lv2_atom_total_size(&ev->body), &ev->body);
+    const LV2_Atom_Object* obj = (LV2_Atom_Object*)&ev->body;
+    ConvoLV2URIs* uris = &self->uris;
+    if (obj->body.otype == uris->clv2_uiinit) {
+      inform_ui(instance);
+    } else {
+      self->schedule->schedule_work(self->schedule->handle, lv2_atom_total_size(&ev->body), &ev->body);
+    }
   }
 
   if (self->bufsize != n_samples) {

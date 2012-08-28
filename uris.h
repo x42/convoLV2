@@ -30,6 +30,7 @@
 #define CONVOLV2__file        CONVOLV2_URI "#file"
 #define CONVOLV2__load        CONVOLV2_URI "#load"
 #define CONVOLV2__state       CONVOLV2_URI "#state"
+#define CONVOLV2__uiinit      CONVOLV2_URI "#uiinit"
 
 typedef struct {
 	LV2_URID atom_Blank;
@@ -42,6 +43,7 @@ typedef struct {
 
 	LV2_URID clv2_ir_file;
 	LV2_URID clv2_state;
+	LV2_URID clv2_uiinit;
 } ConvoLV2URIs;
 
 static inline void
@@ -57,6 +59,7 @@ map_convolv2_uris(LV2_URID_Map* map, ConvoLV2URIs* uris)
 
 	uris->clv2_ir_file       = map->map(map->handle, CONVOLV2__file);
 	uris->clv2_state         = map->map(map->handle, CONVOLV2__state);
+	uris->clv2_uiinit        = map->map(map->handle, CONVOLV2__uiinit);
 }
 
 
