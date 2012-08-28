@@ -43,7 +43,7 @@
 
 #define ENUMPORT(n) \
   P_OUTPUT ## n = (n*2+2), \
-  P_INPUT ## n = (n*2+3),
+  P_INPUT ## n  = (n*2+3),
 
 typedef enum {
   P_CONTROL    = 0,
@@ -140,7 +140,7 @@ work(LV2_Handle                  instance,
 
   /* prepare new engine instance */
   if (!self->clv_offline) {
-    fprintf(stderr, "allocate offline instance\n");
+    fprintf(stderr, "allocate offline instance\n"); // SAFE DEBUG
     self->clv_offline = clv_alloc();
 
     if (!self->clv_offline) {
@@ -153,11 +153,11 @@ work(LV2_Handle                  instance,
   if (size == sizeof(int)) {
     switch(*((int*)data)) {
       case CMD_APPLY:
-	fprintf(stderr, "apply offline instance\n");
+	fprintf(stderr, "apply offline instance\n"); // SAFE DEBUG
 	apply = 1;
 	break;
       case CMD_FREE:
-	fprintf(stderr, "free offline instance\n");
+	fprintf(stderr, "free offline instance\n"); // SAFE DEBUG
 	clv_free(self->clv_offline);
 	self->clv_offline=NULL;
 	break;
@@ -171,7 +171,7 @@ work(LV2_Handle                  instance,
       const LV2_Atom* file_path = read_set_file(uris, obj);
       if (file_path) {
 	const char *fn = (char*)(file_path+1);
-	fprintf(stderr, "load IR %s\n", fn);
+	fprintf(stderr, "load IR %s\n", fn); // SAFE DEBUG
 	clv_configure(self->clv_offline, "convolution.ir.file", fn);
 	apply = 1;
       }
@@ -371,7 +371,7 @@ restore(LV2_Handle                  instance,
 
   /* prepare new engine instance */
   if (!self->clv_offline) {
-    fprintf(stderr, "allocate offline instance\n");
+    fprintf(stderr, "allocate offline instance\n"); // SAFE DEBUG
     self->clv_offline = clv_alloc();
 
     if (!self->clv_offline) {
@@ -389,7 +389,7 @@ restore(LV2_Handle                  instance,
       char kv[1024];
       memcpy(kv, ts, te-ts);
       kv[te-ts]=0;
-      fprintf(stderr, "CFG: %s\n", kv);
+      fprintf(stderr, "CFG: %s\n", kv); // SAFE DEBUG
       if((val=strchr(kv,'='))) {
 	*val=0;
 	clv_configure(self->clv_offline, kv, val+1);
@@ -402,7 +402,7 @@ restore(LV2_Handle                  instance,
 
   if (value) {
     const char* path = (const char*)value;
-    fprintf(stderr, "PTH: convolution.ir.file=%s\n", path);
+    fprintf(stderr, "PTH: convolution.ir.file=%s\n", path); // SAFE DEBUG
     clv_configure(self->clv_offline, "convolution.ir.file", path);
   }
 
