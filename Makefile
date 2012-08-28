@@ -69,6 +69,6 @@ uninstall:
 	-rmdir $(DESTDIR)$(lv2dir)/$(LV2NAME)
 
 clean:
-	rm -f *.o manifest.ttl $(LV2NAME)$(LIB_EXT)
+	rm -f *.o manifest.ttl $(LV2NAME)$(LIB_EXT) $(LV2GUI)$(LIB_EXT)
 
 .PHONY: clean all install uninstall
