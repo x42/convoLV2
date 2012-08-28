@@ -18,7 +18,7 @@ GTKLIBS=`pkg-config --libs gtk+-2.0`
 LV2NAME=convoLV2
 LV2GUI=convoLV2UI
 CFLAGS+=-fPIC
-CXXFLAGS=$(CFLAGS)
+CXXFLAGS=$(CFLAGS) `pkg-config --cflags glib-2.0`
 
 # check for build-dependencies
 ifeq ($(shell pkg-config --exists lv2 lv2core || echo no), no)

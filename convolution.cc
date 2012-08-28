@@ -52,6 +52,9 @@
 #define SRC_QUALITY SRC_SINC_MEDIUM_QUALITY
 #endif
 
+#include <glib.h>
+static volatile gint fftw_guard = 0; // http://www.fftw.org/doc/Thread-safety.html
+
 struct LV2convolv {
   Convproc *convproc;
 
@@ -338,6 +341,11 @@ int clv_initialize (
     return -1;
   }
 
+  while (!g_atomic_int_compare_and_exchange(&fftw_guard, 0, 1)) {
+    usleep (1000);
+  }
+  fprintf(stderr, "CONFIGURE FFTW\n");
+
   clv->convproc = new Convproc;
   clv->convproc->set_options (options);
   clv->convproc->set_density (clv->density);
@@ -353,6 +361,7 @@ int clv_initialize (
     fprintf (stderr, "convoLV2: Cannot initialize convolution engine.\n");
     delete(clv->convproc);
     clv->convproc = NULL;
+    g_atomic_int_set(&fftw_guard, 0);
     return -1;
   }
 
@@ -360,6 +369,7 @@ int clv_initialize (
     fprintf(stderr, "convoLV2: failed to read IR.\n");
     delete(clv->convproc);
     clv->convproc = NULL;
+    g_atomic_int_set(&fftw_guard, 0);
     return -1;
   }
 
@@ -367,6 +377,7 @@ int clv_initialize (
   if (!gb) {
     fprintf (stderr, "convoLV2: memory allocation failed for convolution buffer.\n");
     free(p);
+    g_atomic_int_set(&fftw_guard, 0);
     return -1;
   }
 
@@ -386,6 +397,7 @@ int clv_initialize (
       free(p); free(gb);
       delete(clv->convproc);
       clv->convproc = NULL;
+      g_atomic_int_set(&fftw_guard, 0);
       return -1;
 #else
       clv->ir_chan[c] = ((clv->ir_chan[c]-1)%nchan)+1;
@@ -397,6 +409,7 @@ int clv_initialize (
       free(p); free(gb);
       delete(clv->convproc);
       clv->convproc = NULL;
+      g_atomic_int_set(&fftw_guard, 0);
       return -1;
     }
 
@@ -427,9 +440,11 @@ int clv_initialize (
     fprintf(stderr, "convoLV2: Cannot start processing.\n");
     delete(clv->convproc);
     clv->convproc = NULL;
+    g_atomic_int_set(&fftw_guard, 0);
     return -1;
   }
 
+  g_atomic_int_set(&fftw_guard, 0);
   return 0;
 }
 
