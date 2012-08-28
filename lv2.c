@@ -140,7 +140,7 @@ work(LV2_Handle                  instance,
 
   /* prepare new engine instance */
   if (!self->clv_offline) {
-    fprintf(stderr, "allocate offline instance\n"); // SAFE DEBUG
+    DEBUG_printf("allocate offline instance\n");
     self->clv_offline = clv_alloc();
 
     if (!self->clv_offline) {
@@ -153,11 +153,11 @@ work(LV2_Handle                  instance,
   if (size == sizeof(int)) {
     switch(*((int*)data)) {
       case CMD_APPLY:
-	fprintf(stderr, "apply offline instance\n"); // SAFE DEBUG
+	DEBUG_printf("apply offline instance\n");
 	apply = 1;
 	break;
       case CMD_FREE:
-	fprintf(stderr, "free offline instance\n"); // SAFE DEBUG
+	DEBUG_printf("free offline instance\n");
 	clv_free(self->clv_offline);
 	self->clv_offline=NULL;
 	break;
@@ -171,7 +171,7 @@ work(LV2_Handle                  instance,
       const LV2_Atom* file_path = read_set_file(uris, obj);
       if (file_path) {
 	const char *fn = (char*)(file_path+1);
-	fprintf(stderr, "load IR %s\n", fn); // SAFE DEBUG
+	DEBUG_printf("load IR %s\n", fn);
 	clv_configure(self->clv_offline, "convolution.ir.file", fn);
 	apply = 1;
       }
@@ -383,7 +383,7 @@ restore(LV2_Handle                  instance,
 
   /* prepare new engine instance */
   if (!self->clv_offline) {
-    fprintf(stderr, "allocate offline instance\n"); // SAFE DEBUG
+    DEBUG_printf("allocate offline instance\n");
     self->clv_offline = clv_alloc();
 
     if (!self->clv_offline) {
@@ -401,7 +401,7 @@ restore(LV2_Handle                  instance,
       char kv[1024];
       memcpy(kv, ts, te-ts);
       kv[te-ts]=0;
-      fprintf(stderr, "CFG: %s\n", kv); // SAFE DEBUG
+      DEBUG_printf("CFG: %s\n", kv);
       if((val=strchr(kv,'='))) {
 	*val=0;
 	clv_configure(self->clv_offline, kv, val+1);
@@ -414,7 +414,7 @@ restore(LV2_Handle                  instance,
 
   if (value) {
     const char* path = (const char*)value;
-    fprintf(stderr, "PTH: convolution.ir.file=%s\n", path); // SAFE DEBUG
+    DEBUG_printf("PTH: convolution.ir.file=%s\n", path);
     clv_configure(self->clv_offline, "convolution.ir.file", path);
   }
 
