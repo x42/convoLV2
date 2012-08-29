@@ -76,11 +76,15 @@ typedef struct {
 
   LV2convolv *clv_online; ///< currently active engine
   LV2convolv *clv_offline; ///< inactive engine being configured
+
+  int rate; ///< sample-rate -- constant per instance
+  int chn_in; ///< input channel count -- constant per instance
+  int chn_out; ///< output channel count --constant per instance
+
   int bufsize;
-  int rate;
-  int reinit_in_progress;
-  int chn_in;
-  int chn_out;
+
+  short flag_reinit_in_progress;
+  short flag_notify_ui; ///< notify UI about setting on next run()
 
 } convoLV2;
 
@@ -132,6 +136,8 @@ instantiate(const LV2_Descriptor*     descriptor,
     return NULL;
   }
 
+  VERBOSE_printf("using block size: %d\n", bufsize);
+
   convoLV2* self = (convoLV2*)calloc(1, sizeof(convoLV2));
   if (!self) {
     return NULL;
@@ -147,7 +153,7 @@ instantiate(const LV2_Descriptor*     descriptor,
   self->rate = rate;
   self->chn_in = 1;
   self->chn_out = 1;
-  self->reinit_in_progress = 0;
+  self->flag_reinit_in_progress = 0;
   self->clv_online = NULL;
   self->clv_offline = NULL;
 
@@ -171,7 +177,7 @@ work(LV2_Handle                  instance,
     self->clv_offline = clv_alloc();
 
     if (!self->clv_offline) {
-      self->reinit_in_progress = 0;
+      self->flag_reinit_in_progress = 0;
       return LV2_WORKER_ERR_NO_SPACE; // OOM
     }
     clv_clone_settings(self->clv_offline, self->clv_online);
@@ -208,11 +214,14 @@ work(LV2_Handle                  instance,
   }
 
   if (apply) {
-    if (!clv_initialize(self->clv_offline, self->rate,
-	  self->chn_in, self->chn_out,
-	  /*64 <= buffer-size <=4096*/ self->bufsize)) /*XXX*/ ; /* < respond anyway */
-    respond(handle, 1, ""); // must not be 0, A3 will ignore it.
-    //respond(handle, 0, NULL);
+    clv_initialize(self->clv_offline, self->rate,
+	self->chn_in, self->chn_out,
+	/*64 <= buffer-size <=4096*/ self->bufsize);
+#if 1
+    respond(handle, 1, ""); // size must not be 0. A3 before rev 13146 will igore it
+#else
+    respond(handle, 0, NULL);
+#endif
   }
   return LV2_WORKER_SUCCESS;
 }
@@ -256,7 +265,7 @@ work_response(LV2_Handle  instance,
   int d = CMD_FREE;
   self->schedule->schedule_work(self->schedule->handle, sizeof(int), &d);
 
-  self->reinit_in_progress = 0;
+  self->flag_reinit_in_progress = 0;
   return LV2_WORKER_SUCCESS;
 }
 
@@ -313,32 +322,50 @@ run(LV2_Handle instance, uint32_t n_samples)
   /* Start a sequence in the notify output port. */
   lv2_atom_forge_sequence_head(&self->forge, &self->notify_frame, 0);
 
-  /* Read incoming events */
-  LV2_ATOM_SEQUENCE_FOREACH(self->control_port, ev) {
-    const LV2_Atom_Object* obj = (LV2_Atom_Object*)&ev->body;
-    ConvoLV2URIs* uris = &self->uris;
-    if (obj->body.otype == uris->clv2_uiinit) {
-      inform_ui(instance);
-    } else {
-      self->schedule->schedule_work(self->schedule->handle, lv2_atom_total_size(&ev->body), &ev->body);
-    }
-  }
-
+  /* re-init engine if block-size has changed */
   if (self->bufsize != n_samples) {
-    // re-initialize convolver with new buffersize
+    /* verify if we support the new block-size */
     if (n_samples < 64 || n_samples > 4096 ||
 	/* not power of two */ (n_samples & (n_samples - 1))
 	) {
-      // silence output port ?
-      // TODO: notify user (once for each change)
+      /* silence output ports */
+      for (i=0; i < self->chn_out; i++ ) {
+	memset(output[i], 0, sizeof(float) * n_samples);
+      }
+      // TODO: notify user (once)
       return;
     }
-    if (!self->reinit_in_progress) {
-      self->reinit_in_progress = 1;
+
+    if (!self->flag_reinit_in_progress) {
+      self->flag_reinit_in_progress = 1;
       self->bufsize = n_samples;
       int d = CMD_APPLY;
       self->schedule->schedule_work(self->schedule->handle, sizeof(int), &d);
     }
+  }
+
+  /* don't touch any settings if re-init is scheduled or in progress
+   * TODO re-queue them ?
+   */
+  if (!self->flag_reinit_in_progress) {
+    /* Read incoming events */
+    LV2_ATOM_SEQUENCE_FOREACH(self->control_port, ev) {
+      const LV2_Atom_Object* obj = (LV2_Atom_Object*)&ev->body;
+      ConvoLV2URIs* uris = &self->uris;
+      if (obj->body.otype == uris->clv2_uiinit) {
+	self->flag_notify_ui = 0;
+	inform_ui(instance);
+      } else {
+	// TODO: parse message here and set self->flag_reinit_in_progres=1; IFF an apply would be triggered
+	self->schedule->schedule_work(self->schedule->handle, lv2_atom_total_size(&ev->body), &ev->body);
+      }
+    }
+  }
+
+  /* send current setting to UI */
+  if (self->flag_notify_ui) {
+    self->flag_notify_ui = 0;
+    inform_ui(instance);
   }
 
   clv_convolve(self->clv_online, input, output,
@@ -444,7 +471,7 @@ restore(LV2_Handle                  instance,
     DEBUG_printf("PTH: convolution.ir.file=%s\n", path);
     clv_configure(self->clv_offline, "convolution.ir.file", path);
   }
-#if 0 // initialize here -- fails to notify UI.
+#if 1 // initialize here -- fails to notify UI.
   clv_initialize(self->clv_offline, self->rate, self->chn_in, self->chn_out,
 	  /*64 <= buffer-size <=4096*/ self->bufsize);
 
@@ -452,8 +479,9 @@ restore(LV2_Handle                  instance,
   self->clv_online  = self->clv_offline;
   self->clv_offline = old;
 
-  inform_ui(instance);
-  self->reinit_in_progress = 0;
+  self->flag_reinit_in_progress = 0;
+  self->flag_notify_ui = 1;
+
   clv_free(self->clv_offline);
   self->clv_offline=NULL;
 #else
