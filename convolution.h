@@ -20,6 +20,9 @@
 #ifndef CONVOLUTION_H
 #define CONVOLUTION_H
 
+#define DEBUG_printf(FMT, ...) fprintf(stderr, FMT, ##__VA_ARGS__)
+#define VERBOSE_printf(FMT, ...) fprintf(stderr, FMT, ##__VA_ARGS__)
+
 
 #define MAX_CHANNEL_MAPS (4)
 

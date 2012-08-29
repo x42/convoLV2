@@ -7,11 +7,12 @@
 OPTIMIZATIONS ?= -msse -msse2 -mfpmath=sse -ffast-math -fomit-frame-pointer -O3 -fno-finite-math-only
 PREFIX ?= /usr/local
 CFLAGS ?= $(OPTIMIZATIONS) -Wall
+LIBDIR ?= lib
 
 ###############################################################################
 LIB_EXT=.so
 
-lv2dir = $(PREFIX)/lib/lv2
+LV2DIR ?= $(PREFIX)/$(LIBDIR)/lv2
 LOADLIBES=-lm
 GTKCFLAGS=`pkg-config --cflags gtk+-2.0`
 GTKLIBS=`pkg-config --libs gtk+-2.0`
@@ -56,17 +57,17 @@ $(LV2GUI)$(LIB_EXT): ui.c uris.h
 # install/uninstall/clean target definitions
 
 install: all
-	install -d $(DESTDIR)$(lv2dir)/$(LV2NAME)
-	install -m755 $(LV2NAME)$(LIB_EXT) $(DESTDIR)$(lv2dir)/$(LV2NAME)
-	install -m755 $(LV2GUI)$(LIB_EXT) $(DESTDIR)$(lv2dir)/$(LV2NAME)
-	install -m644 manifest.ttl $(LV2NAME).ttl $(DESTDIR)$(lv2dir)/$(LV2NAME)
+	install -d $(DESTDIR)$(LV2DIR)/$(LV2NAME)
+	install -m755 $(LV2NAME)$(LIB_EXT) $(DESTDIR)$(LV2DIR)/$(LV2NAME)
+	install -m755 $(LV2GUI)$(LIB_EXT) $(DESTDIR)$(LV2DIR)/$(LV2NAME)
+	install -m644 manifest.ttl $(LV2NAME).ttl $(DESTDIR)$(LV2DIR)/$(LV2NAME)
 
 uninstall:
-	rm -f $(DESTDIR)$(lv2dir)/$(LV2NAME)/manifest.ttl
-	rm -f $(DESTDIR)$(lv2dir)/$(LV2NAME)/*.ttl
-	rm -f $(DESTDIR)$(lv2dir)/$(LV2NAME)/$(LV2NAME)$(LIB_EXT)
-	rm -f $(DESTDIR)$(lv2dir)/$(LV2GUI)/$(LV2NAME)$(LIB_EXT)
-	-rmdir $(DESTDIR)$(lv2dir)/$(LV2NAME)
+	rm -f $(DESTDIR)$(LV2DIR)/$(LV2NAME)/manifest.ttl
+	rm -f $(DESTDIR)$(LV2DIR)/$(LV2NAME)/*.ttl
+	rm -f $(DESTDIR)$(LV2DIR)/$(LV2NAME)/$(LV2NAME)$(LIB_EXT)
+	rm -f $(DESTDIR)$(LV2DIR)/$(LV2GUI)/$(LV2NAME)$(LIB_EXT)
+	-rmdir $(DESTDIR)$(LV2DIR)/$(LV2NAME)
 
 clean:
 	rm -f *.o manifest.ttl $(LV2NAME)$(LIB_EXT) $(LV2GUI)$(LIB_EXT)

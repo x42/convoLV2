@@ -139,7 +139,7 @@ int audiofile_read (const char *fn, const int sample_rate, float **buf, unsigned
     }
 
     if (resample_ratio != 1.0) {
-      fprintf(stderr, "convoLV2: resampling IR %ld -> %ld [frames * channels].\n",
+      VERBOSE_printf("convoLV2: resampling IR %ld -> %ld [frames * channels].\n",
 	  (long int) frames_in,
 	  (long int) frames_out);
       SRC_STATE* src_state = src_new(SRC_QUALITY, nfo.channels, NULL);
@@ -154,7 +154,7 @@ int audiofile_read (const char *fn, const int sample_rate, float **buf, unsigned
       src_data.data_in       = rdb;
       src_data.data_out      = *buf;
       src_process(src_state, &src_data);
-      fprintf(stderr, "convoLV2: resampled IR  %ld -> %ld [frames * channels].\n",
+      VERBOSE_printf("convoLV2: resampled IR  %ld -> %ld [frames * channels].\n",
 	  src_data.input_frames_used * nfo.channels,
 	  src_data.output_frames_gen * nfo.channels);
 
@@ -280,7 +280,7 @@ char *clv_dump_settings (LV2convolv *clv) {
   }
   off+= sprintf(rv + off, "convolution.size=%u\n", clv->size);                     // 18 + v
   off+= sprintf(rv + off, "convolution.ir.file=%s\n", clv->ir_fn?clv->ir_fn:"");   // 21 + s
-  fprintf(stderr, "%d / %d \n", off, MAX_CFG_SIZE);
+  //fprintf(stderr, "%d / %d \n", off, MAX_CFG_SIZE);
   return rv;
 }
 
@@ -344,7 +344,6 @@ int clv_initialize (
   while (!g_atomic_int_compare_and_exchange(&fftw_guard, 0, 1)) {
     usleep (1000);
   }
-  fprintf(stderr, "CONFIGURE FFTW\n");
 
   clv->convproc = new Convproc;
   clv->convproc->set_options (options);
@@ -381,7 +380,7 @@ int clv_initialize (
     return -1;
   }
 
-  fprintf (stderr, "convoLV2: CFG %din, %dout | IR: %dchn, %dsamples\n",
+  VERBOSE_printf("convoLV2: CFG %din, %dout | IR: %dchn, %dsamples\n",
       in_channel_cnt, out_channel_cnt, nchan, nfram);
 
   for (c=0; c < MAX_CHANNEL_MAPS; c++) {
@@ -401,7 +400,7 @@ int clv_initialize (
       return -1;
 #else
       clv->ir_chan[c] = ((clv->ir_chan[c]-1)%nchan)+1;
-      fprintf(stderr, "convoLV2: using IR-file channel %d\n", clv->ir_chan[c]);
+      VERBOSE_printf("convoLV2: using IR-file channel %d\n", clv->ir_chan[c]);
 #endif
     }
     if (clv->ir_delay[c] < 0) {
@@ -415,7 +414,7 @@ int clv_initialize (
 
     for (i=0; i < nfram; ++i) gb[i] = p[i*nchan + clv->ir_chan[c]-1] * clv->ir_gain[c];
 
-    fprintf(stderr, "convoLV2: SET in %d -> out %d [IR chn:%d gain:%+.3f dly:%d]\n",
+    VERBOSE_printf("convoLV2: SET in %d -> out %d [IR chn:%d gain:%+.3f dly:%d]\n",
 	((clv->chn_inp[c]-1)%in_channel_cnt) +1,
 	((clv->chn_out[c]-1)%out_channel_cnt) +1,
 	clv->ir_chan[c],
@@ -432,7 +431,6 @@ int clv_initialize (
   free(p);
 
 #if 1 // INFO
-  fprintf(stderr, "\n");
   clv->convproc->print (stderr);
 #endif
 

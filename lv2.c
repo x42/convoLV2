@@ -167,7 +167,7 @@ work(LV2_Handle                  instance,
 
   /* prepare new engine instance */
   if (!self->clv_offline) {
-    fprintf(stderr, "allocate offline instance\n"); // SAFE DEBUG
+    DEBUG_printf("allocate offline instance\n");
     self->clv_offline = clv_alloc();
 
     if (!self->clv_offline) {
@@ -180,11 +180,11 @@ work(LV2_Handle                  instance,
   if (size == sizeof(int)) {
     switch(*((int*)data)) {
       case CMD_APPLY:
-	fprintf(stderr, "apply offline instance\n"); // SAFE DEBUG
+	DEBUG_printf("apply offline instance\n");
 	apply = 1;
 	break;
       case CMD_FREE:
-	fprintf(stderr, "free offline instance\n"); // SAFE DEBUG
+	DEBUG_printf("free offline instance\n");
 	clv_free(self->clv_offline);
 	self->clv_offline=NULL;
 	break;
@@ -198,7 +198,7 @@ work(LV2_Handle                  instance,
       const LV2_Atom* file_path = read_set_file(uris, obj);
       if (file_path) {
 	const char *fn = (char*)(file_path+1);
-	fprintf(stderr, "load IR %s\n", fn); // SAFE DEBUG
+	DEBUG_printf("load IR %s\n", fn);
 	clv_configure(self->clv_offline, "convolution.ir.file", fn);
 	apply = 1;
       }
@@ -410,7 +410,7 @@ restore(LV2_Handle                  instance,
 
   /* prepare new engine instance */
   if (!self->clv_offline) {
-    fprintf(stderr, "allocate offline instance\n"); // SAFE DEBUG
+    DEBUG_printf("allocate offline instance\n");
     self->clv_offline = clv_alloc();
 
     if (!self->clv_offline) {
@@ -428,7 +428,7 @@ restore(LV2_Handle                  instance,
       char kv[1024];
       memcpy(kv, ts, te-ts);
       kv[te-ts]=0;
-      fprintf(stderr, "CFG: %s\n", kv); // SAFE DEBUG
+      DEBUG_printf("CFG: %s\n", kv);
       if((val=strchr(kv,'='))) {
 	*val=0;
 	clv_configure(self->clv_offline, kv, val+1);
@@ -441,11 +441,24 @@ restore(LV2_Handle                  instance,
 
   if (value) {
     const char* path = (const char*)value;
-    fprintf(stderr, "PTH: convolution.ir.file=%s\n", path); // SAFE DEBUG
+    DEBUG_printf("PTH: convolution.ir.file=%s\n", path);
     clv_configure(self->clv_offline, "convolution.ir.file", path);
   }
+#if 0 // initialize here -- fails to notify UI.
+  clv_initialize(self->clv_offline, self->rate, self->chn_in, self->chn_out,
+	  /*64 <= buffer-size <=4096*/ self->bufsize);
 
+  LV2convolv *old   = self->clv_online;
+  self->clv_online  = self->clv_offline;
+  self->clv_offline = old;
+
+  inform_ui(instance);
+  self->reinit_in_progress = 0;
+  clv_free(self->clv_offline);
+  self->clv_offline=NULL;
+#else
   self->bufsize = 0; // kick worker thread in next run cb -> notifies UI
+#endif
   return LV2_STATE_SUCCESS;
 }
 
