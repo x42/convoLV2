@@ -126,8 +126,8 @@ instantiate(const LV2_Descriptor*     descriptor,
   LV2_URID atom_Int  = map->map(map->handle, LV2_ATOM__Int);
   int      bufsize   = 0;
   for (const LV2_Options_Option* o = options; o->key; ++o) {
-    if (o->key == bufsz_max && o->value->type == atom_Int) {
-      bufsize = ((const LV2_Atom_Int*)o->value)->body;
+    if (o->key == bufsz_max && o->type == atom_Int) {
+	    bufsize = *(const int32_t*)o->value;
     }
   }
 
