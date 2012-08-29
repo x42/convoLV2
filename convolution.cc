@@ -85,7 +85,7 @@ struct LV2convolv {
 /** read an audio-file completely into memory
  * allocated memory needs to be free()ed by caller
  */
-int audiofile_read (const char *fn, const int sample_rate, float **buf, unsigned int *n_ch, unsigned int *n_sp) {
+static int audiofile_read (const char *fn, const int sample_rate, float **buf, unsigned int *n_ch, unsigned int *n_sp) {
   SF_INFO nfo;
   SNDFILE  *sndfile;
   float resample_ratio = 1.0;
@@ -453,7 +453,7 @@ int clv_is_active (LV2convolv *clv) {
   return 1;
 }
 
-void silent_output(float * const * outbuf, size_t n_channels, size_t n_samples) {
+static void silent_output(float * const * outbuf, size_t n_channels, size_t n_samples) {
   unsigned int c;
   for (c=0; c < n_channels; ++c)
     memset(outbuf[c], 0, n_samples * sizeof(float));

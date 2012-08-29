@@ -501,7 +501,7 @@ restore(LV2_Handle                  instance,
 
 
 
-const void*
+static const void*
 extension_data(const char* uri)
 {
   static const LV2_Worker_Interface worker = { work, work_response, NULL };
