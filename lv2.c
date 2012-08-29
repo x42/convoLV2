@@ -417,8 +417,21 @@ restore(LV2_Handle                  instance,
     DEBUG_printf("PTH: convolution.ir.file=%s\n", path);
     clv_configure(self->clv_offline, "convolution.ir.file", path);
   }
+#if 0 // initialize here -- fails to notify UI.
+  clv_initialize(self->clv_offline, self->rate, self->chn_in, self->chn_out,
+	  /*64 <= buffer-size <=4096*/ self->bufsize);
 
+  LV2convolv *old   = self->clv_online;
+  self->clv_online  = self->clv_offline;
+  self->clv_offline = old;
+
+  inform_ui(instance);
+  self->reinit_in_progress = 0;
+  clv_free(self->clv_offline);
+  self->clv_offline=NULL;
+#else
   self->bufsize = 0; // kick worker thread in next run cb -> notifies UI
+#endif
   return LV2_STATE_SUCCESS;
 }
 
