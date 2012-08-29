@@ -23,9 +23,11 @@
 #include <string.h>
 #include "convolution.h"
 
-#include "lv2/lv2plug.in/ns/lv2core/lv2.h"
+#include "lv2/lv2plug.in/ns/ext/buf-size/buf-size.h"
+#include "lv2/lv2plug.in/ns/ext/options/options.h"
 #include "lv2/lv2plug.in/ns/ext/state/state.h"
 #include "lv2/lv2plug.in/ns/ext/worker/worker.h"
+#include "lv2/lv2plug.in/ns/lv2core/lv2.h"
 
 #include "./uris.h"
 
@@ -88,35 +90,60 @@ instantiate(const LV2_Descriptor*     descriptor,
             const char*               bundle_path,
             const LV2_Feature* const* features)
 {
-  int i;
-  convoLV2* self = (convoLV2*)calloc(1, sizeof(convoLV2));
-  if(!self) { return NULL ;}
-
-  for (i = 0; features[i]; ++i) {
+  const LV2_Options_Option* options  = NULL;
+  LV2_URID_Map*             map      = NULL;
+  LV2_Worker_Schedule*      schedule = NULL;
+  for (int i = 0; features[i]; ++i) {
     if (!strcmp(features[i]->URI, LV2_URID__map)) {
-      self->map = (LV2_URID_Map*)features[i]->data;
+      map = (LV2_URID_Map*)features[i]->data;
     } else if (!strcmp(features[i]->URI, LV2_WORKER__schedule)) {
-      self->schedule = (LV2_Worker_Schedule*)features[i]->data;
+      schedule = (LV2_Worker_Schedule*)features[i]->data;
+    } else if (!strcmp(features[i]->URI, LV2_OPTIONS__options)) {
+      options = (const LV2_Options_Option*)features[i]->data;
     }
   }
 
-  if (!self->map) {
+  if (!map) {
     fprintf(stderr, "Missing feature uri:map.\n");
-    free(self);
     return NULL;
   }
 
-  if (!self->schedule) {
+  if (!schedule) {
     fprintf(stderr, "Missing feature work:schedule.\n");
-    free(self);
+    return NULL;
+  }
+
+  if (!options) {
+    fprintf(stderr, "Missing options.\n");
+    return NULL;
+  }
+
+  LV2_URID bufsz_max = map->map(map->handle, LV2_BUF_SIZE__maxBlockLength);
+  LV2_URID atom_Int  = map->map(map->handle, LV2_ATOM__Int);
+  int      bufsize   = 0;
+  for (const LV2_Options_Option* o = options; o->key; ++o) {
+    if (o->key == bufsz_max && o->value->type == atom_Int) {
+      bufsize = ((const LV2_Atom_Int*)o->value)->body;
+    }
+  }
+
+  if (bufsize == 0) {
+    fprintf(stderr, "No maximum buffer size given.\n");
+    return NULL;
+  }
+
+  convoLV2* self = (convoLV2*)calloc(1, sizeof(convoLV2));
+  if (!self) {
     return NULL;
   }
 
   /* Map URIs and initialise forge */
-  map_convolv2_uris(self->map, &self->uris);
-  lv2_atom_forge_init(&self->forge, self->map);
+  map_convolv2_uris(map, &self->uris);
+  lv2_atom_forge_init(&self->forge, map);
 
-  self->bufsize = 1024;
+  self->map = map;
+  self->schedule = schedule;
+  self->bufsize = bufsize;
   self->rate = rate;
   self->chn_in = 1;
   self->chn_out = 1;
