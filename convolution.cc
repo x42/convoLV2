@@ -121,10 +121,10 @@ static int audiofile_read (const char *fn, const int sample_rate, float **buf, u
     } else {
       rdb = (float*) malloc(frames_in*sizeof(float));
       if (!rdb) {
-	fprintf (stderr, "convoLV2: memory allocation failed for IR resample buffer.\n");
-	sf_close (sndfile);
-	free(*buf);
-	return -1;
+        fprintf (stderr, "convoLV2: memory allocation failed for IR resample buffer.\n");
+        sf_close (sndfile);
+        free(*buf);
+        return -1;
       }
     }
 
@@ -132,7 +132,7 @@ static int audiofile_read (const char *fn, const int sample_rate, float **buf, u
       fprintf(stderr, "convoLV2: IR short read %ld of %ld\n", (long int) rd, (long int) nfo.frames);
       free(*buf);
       if (resample_ratio != 1.0) {
-	free(rdb);
+        free(rdb);
       }
       sf_close (sndfile);
       return -3;
@@ -140,8 +140,8 @@ static int audiofile_read (const char *fn, const int sample_rate, float **buf, u
 
     if (resample_ratio != 1.0) {
       VERBOSE_printf("convoLV2: resampling IR %ld -> %ld [frames * channels].\n",
-	  (long int) frames_in,
-	  (long int) frames_out);
+          (long int) frames_in,
+          (long int) frames_out);
       SRC_STATE* src_state = src_new(SRC_QUALITY, nfo.channels, NULL);
       SRC_DATA src_data;
 
@@ -155,8 +155,8 @@ static int audiofile_read (const char *fn, const int sample_rate, float **buf, u
       src_data.data_out      = *buf;
       src_process(src_state, &src_data);
       VERBOSE_printf("convoLV2: resampled IR  %ld -> %ld [frames * channels].\n",
-	  src_data.input_frames_used * nfo.channels,
-	  src_data.output_frames_gen * nfo.channels);
+          src_data.input_frames_used * nfo.channels,
+          src_data.output_frames_gen * nfo.channels);
 
       if (n_sp) *n_sp = (unsigned int) src_data.output_frames_gen;
       free(rdb);
@@ -230,27 +230,27 @@ int clv_configure (LV2convolv *clv, const char *key, const char *value) {
   } else if (!strncasecmp (key, "convolution.out.source.", 23)) {
     if (sscanf (key, "convolution.source.%d", &n) == 1) {
       if ((0 < n) && (n <= MAX_CHANNEL_MAPS))
-	clv->chn_inp[n] = atoi(value);
+        clv->chn_inp[n] = atoi(value);
     }
   } else if (!strncasecmp (key, "convolution.out.source.", 23)) {
     if (sscanf (key, "convolution.output.%d", &n) == 1) {
       if ((0 <= n) && (n < MAX_CHANNEL_MAPS))
-	clv->chn_out[n] = atoi(value);
+        clv->chn_out[n] = atoi(value);
     }
   } else if (!strncasecmp (key, "convolution.ir.channel.", 23)) {
     if (sscanf (key, "convolution.ir.channel.%d", &n) == 1) {
       if ((0 <= n) && (n < MAX_CHANNEL_MAPS))
-	clv->ir_chan[n] = atoi(value);
+        clv->ir_chan[n] = atoi(value);
     }
   } else if (!strncasecmp (key, "convolution.ir.gain.", 20)) {
     if (sscanf (key, "convolution.ir.gain.%d", &n) == 1) {
       if ((0 <= n) && (n < MAX_CHANNEL_MAPS))
-	clv->ir_gain[n] = atof(value);
+        clv->ir_gain[n] = atof(value);
     }
   } else if (!strncasecmp (key, "convolution.ir.delay.", 21)) {
     if (sscanf (key, "convolution.ir.delay.%d", &n) == 1) {
       if ((0 <= n) && (n < MAX_CHANNEL_MAPS))
-	clv->ir_delay[n] = atoi(value);
+        clv->ir_delay[n] = atoi(value);
     }
   } else if (strcasecmp (key, "convolution.size") == 0) {
     clv->size = atoi(value);
@@ -291,9 +291,9 @@ int clv_query_setting (LV2convolv *clv, const char *key, char *value, size_t val
   if (strcasecmp (key, "convolution.ir.file") == 0) {
     if (clv->ir_fn) {
       if (strlen(clv->ir_fn) >= val_max_len)
-	rv = -1;
+        rv = -1;
       else
-	rv=snprintf(value, val_max_len, "%s", clv->ir_fn);
+        rv=snprintf(value, val_max_len, "%s", clv->ir_fn);
     }
   }
   // TODO allow querying other settings
@@ -350,13 +350,13 @@ int clv_initialize (
   clv->convproc->set_density (clv->density);
 
   if (clv->convproc->configure (
-	/*in*/  in_channel_cnt,
-	/*out*/ out_channel_cnt,
-	/*max-convolution length */ clv->size,
-	/*quantum*/  buffersize,
-	/*min-part*/ buffersize /* must be >= fragm */,
-	/*max-part*/ buffersize /* Convproc::MAXPART -> stich output every period */
-	)) {
+        /*in*/  in_channel_cnt,
+        /*out*/ out_channel_cnt,
+        /*max-convolution length */ clv->size,
+        /*quantum*/  buffersize,
+        /*min-part*/ buffersize /* must be >= fragm */,
+        /*max-part*/ buffersize /* Convproc::MAXPART -> stich output every period */
+        )) {
     fprintf (stderr, "convoLV2: Cannot initialize convolution engine.\n");
     delete(clv->convproc);
     clv->convproc = NULL;
@@ -415,16 +415,16 @@ int clv_initialize (
     for (i=0; i < nfram; ++i) gb[i] = p[i*nchan + clv->ir_chan[c]-1] * clv->ir_gain[c];
 
     VERBOSE_printf("convoLV2: SET in %d -> out %d [IR chn:%d gain:%+.3f dly:%d]\n",
-	((clv->chn_inp[c]-1)%in_channel_cnt) +1,
-	((clv->chn_out[c]-1)%out_channel_cnt) +1,
-	clv->ir_chan[c],
-	clv->ir_gain[c],
-	clv->ir_delay[c]
-	);
+        ((clv->chn_inp[c]-1)%in_channel_cnt) +1,
+        ((clv->chn_out[c]-1)%out_channel_cnt) +1,
+        clv->ir_chan[c],
+        clv->ir_gain[c],
+        clv->ir_delay[c]
+        );
     clv->convproc->impdata_create (
-	(clv->chn_inp[c]-1)%in_channel_cnt,
-	(clv->chn_out[c]-1)%out_channel_cnt,
-	1, gb, clv->ir_delay[c], clv->ir_delay[c] + nfram);
+        (clv->chn_inp[c]-1)%in_channel_cnt,
+        (clv->chn_out[c]-1)%out_channel_cnt,
+        1, gb, clv->ir_delay[c], clv->ir_delay[c] + nfram);
   }
 
   free(gb);

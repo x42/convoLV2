@@ -137,7 +137,7 @@ instantiate(const LV2_Descriptor*     descriptor,
   }
 
   if (bufsize < 64 || bufsize > 8192 ||
-	/* not power of two */ (bufsize & (bufsize - 1))
+      /* not power of two */ (bufsize & (bufsize - 1))
      ) {
     fprintf(stderr, "unsupported block-size: %d\n", bufsize);
     fprintf(stderr, "64 <= bs <= 8192 and bs needs to be power of two\n");
@@ -193,15 +193,15 @@ work(LV2_Handle                  instance,
 
   if (size == sizeof(int)) {
     switch(*((const int*)data)) {
-      case CMD_APPLY:
-	DEBUG_printf("apply offline instance\n");
-	apply = 1;
-	break;
-      case CMD_FREE:
-	DEBUG_printf("free offline instance\n");
-	clv_free(self->clv_offline);
-	self->clv_offline=NULL;
-	break;
+    case CMD_APPLY:
+      DEBUG_printf("apply offline instance\n");
+      apply = 1;
+      break;
+    case CMD_FREE:
+      DEBUG_printf("free offline instance\n");
+      clv_free(self->clv_offline);
+      self->clv_offline=NULL;
+      break;
     }
   } else {
     /* handle message described in Atom */
@@ -211,10 +211,10 @@ work(LV2_Handle                  instance,
     if (obj->body.otype == uris->patch_Set) {
       const LV2_Atom* file_path = read_set_file(uris, obj);
       if (file_path) {
-	const char *fn = (const char*)(file_path+1);
-	DEBUG_printf("load IR %s\n", fn);
-	clv_configure(self->clv_offline, "convolution.ir.file", fn);
-	apply = 1;
+        const char *fn = (const char*)(file_path+1);
+        DEBUG_printf("load IR %s\n", fn);
+        clv_configure(self->clv_offline, "convolution.ir.file", fn);
+        apply = 1;
       }
     } else {
       fprintf(stderr, "Unknown message/object type %d\n", obj->body.otype);
@@ -223,8 +223,8 @@ work(LV2_Handle                  instance,
 
   if (apply) {
     clv_initialize(self->clv_offline, self->rate,
-	self->chn_in, self->chn_out,
-	/*64 <= buffer-size <=4096*/ self->bufsize);
+                   self->chn_in, self->chn_out,
+                   /*64 <= buffer-size <=4096*/ self->bufsize);
 #if 1
     respond(handle, 1, ""); // size must not be 0. A3 before rev 13146 will igore it
 #else
@@ -324,8 +324,8 @@ run(LV2_Handle instance, uint32_t n_samples)
   /* Set up forge to write directly to notify output port. */
   const uint32_t notify_capacity = self->notify_port->atom.size;
   lv2_atom_forge_set_buffer(&self->forge,
-			    (uint8_t*)self->notify_port,
-			    notify_capacity);
+                            (uint8_t*)self->notify_port,
+                            notify_capacity);
 
   /* Start a sequence in the notify output port. */
   lv2_atom_forge_sequence_head(&self->forge, &self->notify_frame, 0);
@@ -334,11 +334,11 @@ run(LV2_Handle instance, uint32_t n_samples)
   if (self->bufsize != n_samples) {
     /* verify if we support the new block-size */
     if (n_samples < 64 || n_samples > 8192 ||
-	/* not power of two */ (n_samples & (n_samples - 1))
-	) {
+        /* not power of two */ (n_samples & (n_samples - 1))
+        ) {
       /* silence output ports */
       for (i=0; i < self->chn_out; i++ ) {
-	memset(output[i], 0, sizeof(float) * n_samples);
+        memset(output[i], 0, sizeof(float) * n_samples);
       }
       // TODO: notify user (once)
       return;
@@ -361,11 +361,11 @@ run(LV2_Handle instance, uint32_t n_samples)
       const LV2_Atom_Object* obj = (LV2_Atom_Object*)&ev->body;
       ConvoLV2URIs* uris = &self->uris;
       if (obj->body.otype == uris->clv2_uiinit) {
-	self->flag_notify_ui = 0;
-	inform_ui(instance);
+        self->flag_notify_ui = 0;
+        inform_ui(instance);
       } else {
-	// TODO: parse message here and set self->flag_reinit_in_progres=1; IFF an apply would be triggered
-	self->schedule->schedule_work(self->schedule->handle, lv2_atom_total_size(&ev->body), &ev->body);
+        // TODO: parse message here and set self->flag_reinit_in_progres=1; IFF an apply would be triggered
+        self->schedule->schedule_work(self->schedule->handle, lv2_atom_total_size(&ev->body), &ev->body);
       }
     }
   }
@@ -405,9 +405,9 @@ save(LV2_Handle                instance,
   char *cfg = clv_dump_settings(self->clv_online);
   if (cfg) {
     store(handle, self->uris.clv2_state,
-	cfg, strlen(cfg) + 1,
-	self->uris.atom_String,
-	LV2_STATE_IS_POD | LV2_STATE_IS_PORTABLE);
+          cfg, strlen(cfg) + 1,
+          self->uris.atom_String,
+          LV2_STATE_IS_POD | LV2_STATE_IS_PORTABLE);
     free(cfg);
   }
 
@@ -422,9 +422,9 @@ save(LV2_Handle                instance,
     if (clv_query_setting(self->clv_online, "convolution.ir.file", fn, 1024) > 0 ) {
       char* apath = map_path->abstract_path(map_path->handle, fn);
       store(handle, self->uris.clv2_ir_file,
-	  apath, strlen(apath) + 1,
-	  self->uris.atom_Path,
-	  LV2_STATE_IS_POD | LV2_STATE_IS_PORTABLE);
+            apath, strlen(apath) + 1,
+            self->uris.atom_Path,
+            LV2_STATE_IS_POD | LV2_STATE_IS_PORTABLE);
       free(apath);
     }
   }
@@ -465,8 +465,8 @@ restore(LV2_Handle                  instance,
       kv[te-ts]=0;
       DEBUG_printf("CFG: %s\n", kv);
       if((val=strchr(kv,'='))) {
-	*val=0;
-	clv_configure(self->clv_offline, kv, val+1);
+        *val=0;
+        clv_configure(self->clv_offline, kv, val+1);
       }
       ts=te+1;
     }
@@ -481,7 +481,7 @@ restore(LV2_Handle                  instance,
   }
 #if 1 // initialize here -- fails to notify UI.
   clv_initialize(self->clv_offline, self->rate, self->chn_in, self->chn_out,
-	  /*64 <= buffer-size <=4096*/ self->bufsize);
+                 /*64 <= buffer-size <=4096*/ self->bufsize);
 
   LV2convolv *old   = self->clv_online;
   self->clv_online  = self->clv_offline;
