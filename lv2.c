@@ -81,7 +81,7 @@ typedef struct {
   int chn_in; ///< input channel count -- constant per instance
   int chn_out; ///< output channel count --constant per instance
 
-  int bufsize;
+  unsigned int bufsize;
 
   short flag_reinit_in_progress;
   short flag_notify_ui; ///< notify UI about setting on next run()
@@ -124,7 +124,7 @@ instantiate(const LV2_Descriptor*     descriptor,
 
   LV2_URID bufsz_max = map->map(map->handle, LV2_BUF_SIZE__maxBlockLength);
   LV2_URID atom_Int  = map->map(map->handle, LV2_ATOM__Int);
-  int      bufsize   = 0;
+  uint32_t bufsize   = 0;
   for (const LV2_Options_Option* o = options; o->key; ++o) {
     if (o->key == bufsz_max && o->type == atom_Int) {
 	    bufsize = *(const int32_t*)o->value;
@@ -133,6 +133,14 @@ instantiate(const LV2_Descriptor*     descriptor,
 
   if (bufsize == 0) {
     fprintf(stderr, "No maximum buffer size given.\n");
+    return NULL;
+  }
+
+  if (bufsize < 64 || bufsize > 8192 ||
+	/* not power of two */ (bufsize & (bufsize - 1))
+     ) {
+    fprintf(stderr, "unsupported block-size: %d\n", bufsize);
+    fprintf(stderr, "64 <= bs <= 8192 and bs needs to be power of two\n");
     return NULL;
   }
 
@@ -325,7 +333,7 @@ run(LV2_Handle instance, uint32_t n_samples)
   /* re-init engine if block-size has changed */
   if (self->bufsize != n_samples) {
     /* verify if we support the new block-size */
-    if (n_samples < 64 || n_samples > 4096 ||
+    if (n_samples < 64 || n_samples > 8192 ||
 	/* not power of two */ (n_samples & (n_samples - 1))
 	) {
       /* silence output ports */
