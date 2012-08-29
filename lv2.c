@@ -192,7 +192,7 @@ work(LV2_Handle                  instance,
   }
 
   if (size == sizeof(int)) {
-    switch(*((int*)data)) {
+    switch(*((const int*)data)) {
       case CMD_APPLY:
 	DEBUG_printf("apply offline instance\n");
 	apply = 1;
@@ -211,7 +211,7 @@ work(LV2_Handle                  instance,
     if (obj->body.otype == uris->patch_Set) {
       const LV2_Atom* file_path = read_set_file(uris, obj);
       if (file_path) {
-	const char *fn = (char*)(file_path+1);
+	const char *fn = (const char*)(file_path+1);
 	DEBUG_printf("load IR %s\n", fn);
 	clv_configure(self->clv_offline, "convolution.ir.file", fn);
 	apply = 1;

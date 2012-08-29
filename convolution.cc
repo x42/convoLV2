@@ -224,35 +224,35 @@ void clv_free (LV2convolv *clv) {
 int clv_configure (LV2convolv *clv, const char *key, const char *value) {
   if (!clv) return 0;
   int n;
-  if (strcasecmp (key, (char*)"convolution.ir.file") == 0) {
+  if (strcasecmp (key, "convolution.ir.file") == 0) {
     free(clv->ir_fn);
     clv->ir_fn = strdup(value);
-  } else if (!strncasecmp (key, (char*)"convolution.out.source.", 23)) {
-    if (sscanf (key, (char*)"convolution.source.%d", &n) == 1) {
+  } else if (!strncasecmp (key, "convolution.out.source.", 23)) {
+    if (sscanf (key, "convolution.source.%d", &n) == 1) {
       if ((0 < n) && (n <= MAX_CHANNEL_MAPS))
 	clv->chn_inp[n] = atoi(value);
     }
-  } else if (!strncasecmp (key, (char*)"convolution.out.source.", 23)) {
-    if (sscanf (key, (char*)"convolution.output.%d", &n) == 1) {
+  } else if (!strncasecmp (key, "convolution.out.source.", 23)) {
+    if (sscanf (key, "convolution.output.%d", &n) == 1) {
       if ((0 <= n) && (n < MAX_CHANNEL_MAPS))
 	clv->chn_out[n] = atoi(value);
     }
-  } else if (!strncasecmp (key, (char*)"convolution.ir.channel.", 23)) {
-    if (sscanf (key, (char*)"convolution.ir.channel.%d", &n) == 1) {
+  } else if (!strncasecmp (key, "convolution.ir.channel.", 23)) {
+    if (sscanf (key, "convolution.ir.channel.%d", &n) == 1) {
       if ((0 <= n) && (n < MAX_CHANNEL_MAPS))
 	clv->ir_chan[n] = atoi(value);
     }
-  } else if (!strncasecmp (key, (char*)"convolution.ir.gain.", 20)) {
-    if (sscanf (key, (char*)"convolution.ir.gain.%d", &n) == 1) {
+  } else if (!strncasecmp (key, "convolution.ir.gain.", 20)) {
+    if (sscanf (key, "convolution.ir.gain.%d", &n) == 1) {
       if ((0 <= n) && (n < MAX_CHANNEL_MAPS))
 	clv->ir_gain[n] = atof(value);
     }
-  } else if (!strncasecmp (key, (char*)"convolution.ir.delay.", 21)) {
-    if (sscanf (key, (char*)"convolution.ir.delay.%d", &n) == 1) {
+  } else if (!strncasecmp (key, "convolution.ir.delay.", 21)) {
+    if (sscanf (key, "convolution.ir.delay.%d", &n) == 1) {
       if ((0 <= n) && (n < MAX_CHANNEL_MAPS))
 	clv->ir_delay[n] = atoi(value);
     }
-  } else if (strcasecmp (key, (char*)"convolution.size") == 0) {
+  } else if (strcasecmp (key, "convolution.size") == 0) {
     clv->size = atoi(value);
     if (clv->size > 0x00100000) {
       clv->size = 0x00100000;
@@ -288,7 +288,7 @@ int clv_query_setting (LV2convolv *clv, const char *key, char *value, size_t val
   int rv = 0;
   if (!clv || !value || !key) return -1;
 
-  if (strcasecmp (key, (char*)"convolution.ir.file") == 0) {
+  if (strcasecmp (key, "convolution.ir.file") == 0) {
     if (clv->ir_fn) {
       if (strlen(clv->ir_fn) >= val_max_len)
 	rv = -1;
