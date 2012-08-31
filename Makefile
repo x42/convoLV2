@@ -18,6 +18,7 @@ GTKCFLAGS=`pkg-config --cflags gtk+-2.0`
 GTKLIBS=`pkg-config --libs gtk+-2.0`
 LV2NAME=convoLV2
 LV2GUI=convoLV2UI
+BUNDLE=convo.lv2
 CFLAGS+=-fPIC
 CXXFLAGS=$(CFLAGS) `pkg-config --cflags glib-2.0`
 
@@ -47,29 +48,31 @@ manifest.ttl: manifest.ttl.in
 	  manifest.ttl.in > manifest.ttl
 
 $(LV2NAME)$(LIB_EXT): lv2.c convolution.o uris.h
-	$(CC) -o $(LV2NAME)$(LIB_EXT) $(CFLAGS) $(LDFLAGS) $(LOADLIBES) \
-	  -std=c99 -shared -Wl,-Bstatic -Wl,-Bdynamic lv2.c convolution.o
+	$(CXX) $(CFLAGS) \
+	  -o $(LV2NAME)$(LIB_EXT) lv2.c convolution.o \
+	  $(LDFLAGS) $(LOADLIBES) -shared -Wl,-Bstatic -Wl,-Bdynamic
 
 $(LV2GUI)$(LIB_EXT): ui.c uris.h
-	$(CC) -o $(LV2GUI)$(LIB_EXT) $(CFLAGS) $(LDFLAGS) $(GTKCFLAGS) $(GTKLIBS) \
-	  -std=c99 -shared -Wl,-Bstatic -Wl,-Bdynamic ui.c
+	$(CXX) $(CFLAGS) \
+	  -o $(LV2GUI)$(LIB_EXT) ui.c \
+	  $(LDFLAGS) $(GTKCFLAGS) $(GTKLIBS) -shared -Wl,-Bstatic -Wl,-Bdynamic
 
 %.o: %.cc %.h
 
 # install/uninstall/clean target definitions
 
 install: all
-	install -d $(DESTDIR)$(LV2DIR)/$(LV2NAME)
-	install -m755 $(LV2NAME)$(LIB_EXT) $(DESTDIR)$(LV2DIR)/$(LV2NAME)
-	install -m755 $(LV2GUI)$(LIB_EXT) $(DESTDIR)$(LV2DIR)/$(LV2NAME)
-	install -m644 manifest.ttl $(LV2NAME).ttl $(DESTDIR)$(LV2DIR)/$(LV2NAME)
+	install -d $(DESTDIR)$(LV2DIR)/$(BUNDLE)
+	install -m755 $(LV2NAME)$(LIB_EXT) $(DESTDIR)$(LV2DIR)/$(BUNDLE)
+	install -m755 $(LV2GUI)$(LIB_EXT) $(DESTDIR)$(LV2DIR)/$(BUNDLE)
+	install -m644 manifest.ttl $(LV2NAME).ttl $(DESTDIR)$(LV2DIR)/$(BUNDLE)
 
 uninstall:
-	rm -f $(DESTDIR)$(LV2DIR)/$(LV2NAME)/manifest.ttl
-	rm -f $(DESTDIR)$(LV2DIR)/$(LV2NAME)/*.ttl
-	rm -f $(DESTDIR)$(LV2DIR)/$(LV2NAME)/$(LV2NAME)$(LIB_EXT)
-	rm -f $(DESTDIR)$(LV2DIR)/$(LV2GUI)/$(LV2NAME)$(LIB_EXT)
-	-rmdir $(DESTDIR)$(LV2DIR)/$(LV2NAME)
+	rm -f $(DESTDIR)$(LV2DIR)/$(BUNDLE)/manifest.ttl
+	rm -f $(DESTDIR)$(LV2DIR)/$(BUNDLE)/*.ttl
+	rm -f $(DESTDIR)$(LV2DIR)/$(BUNDLE)/$(LV2NAME)$(LIB_EXT)
+	rm -f $(DESTDIR)$(LV2DIR)/$(BUNDLE)/$(LV2GUI)$(LIB_EXT)
+	-rmdir $(DESTDIR)$(LV2DIR)/$(BUNDLE)
 
 clean:
 	rm -f *.o manifest.ttl $(LV2NAME)$(LIB_EXT) $(LV2GUI)$(LIB_EXT)
