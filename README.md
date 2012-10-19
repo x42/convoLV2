@@ -12,6 +12,7 @@ LV2 config-options extension.
 
 The plugin works properly, but it is not [yet] possible to
 *   change the configuration settings (gain, delay, channel-map)
+*   only comes with a very basic GUI to load an IR file
 
 Installation & Usage
 --------------------
@@ -28,6 +29,3 @@ Make accepts the following parameters: `CFLAGS, LDFLAGS, PREFIX, DESTDIR`
     make install DESTDIR=$(CURDIR)/debian/convoLV2 PREFIX=/usr
 
 Report bugs to <robin@gareus.org> or on IRC freenode.net #lv2 
-
-since this is WORK IN PROGRESS with known issues, don't bother to
-report issues at https://github.com/x42/convoLV2/issues
