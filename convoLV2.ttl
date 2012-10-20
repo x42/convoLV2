@@ -176,7 +176,15 @@
 	a ui:GtkUI ;
 	lv2:requiredFeature urid:map ;
 	ui:portNotification [
-		ui:plugin <http://gareus.org/oss/lv2/convoLV2> ;
+		ui:plugin <http://gareus.org/oss/lv2/convoLV2#Mono> ;
+		lv2:symbol "notify" ;
+		ui:notifyType atom:Blank
+	] , [
+		ui:plugin <http://gareus.org/oss/lv2/convoLV2#Stereo> ;
+		lv2:symbol "notify" ;
+		ui:notifyType atom:Blank
+	] , [
+		ui:plugin <http://gareus.org/oss/lv2/convoLV2#MonoToStereo> ;
 		lv2:symbol "notify" ;
 		ui:notifyType atom:Blank
 	] .
