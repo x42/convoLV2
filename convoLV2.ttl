@@ -99,28 +99,28 @@
 		lv2:index 2 ;
 		lv2:symbol "out_1" ;
 		lv2:name "OutL" ;
-		pg:role pg:leftChannel
+		lv2:designation pg:leftChannel
 	] , [
 		a lv2:AudioPort ,
 			lv2:InputPort ;
 		lv2:index 3 ;
 		lv2:symbol "in_1" ;
 		lv2:name "InL" ;
-		pg:role pg:leftChannel
+		lv2:designation pg:leftChannel
 	] , [
 		a lv2:AudioPort ,
 			lv2:OutputPort ;
 		lv2:index 4 ;
 		lv2:symbol "out_2" ;
 		lv2:name "OutR" ;
-		pg:role pg:rightChannel
+		lv2:designation pg:rightChannel
 	] , [
 		a lv2:AudioPort ,
 			lv2:InputPort ;
 		lv2:index 5 ;
 		lv2:symbol "in_2" ;
 		lv2:name "InR" ;
-		pg:role pg:rightChannel
+		lv2:designation pg:rightChannel
 	] .
 
 <http://gareus.org/oss/lv2/convoLV2#MonoToStereo>
@@ -156,7 +156,7 @@
 		lv2:index 2 ;
 		lv2:symbol "out_1" ;
 		lv2:name "OutL" ;
-		pg:role pg:leftChannel
+		lv2:designation pg:leftChannel
 	] , [
 		a lv2:AudioPort ,
 			lv2:InputPort ;
@@ -169,7 +169,7 @@
 		lv2:index 4 ;
 		lv2:symbol "out_2" ;
 		lv2:name "OutR" ;
-		pg:role pg:rightChannel
+		lv2:designation pg:rightChannel
 	] .
 
 <http://gareus.org/oss/lv2/convoLV2#ui>
