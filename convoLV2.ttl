@@ -9,7 +9,7 @@
 @prefix urid:  <http://lv2plug.in/ns/ext/urid#> .
 @prefix work:  <http://lv2plug.in/ns/ext/worker#> .
 
-<http://gareus.org/>
+<http://gareus.org/rgareus#me>
 	a foaf:Person ;
 	foaf:name "Robin Gareus" ;
 	foaf:mbox <mailto:robin@gareus.org> ;
