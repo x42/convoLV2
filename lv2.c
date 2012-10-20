@@ -518,7 +518,7 @@ extension_data(const char* uri)
 }
 
 static const LV2_Descriptor descriptor0 = {
-  CONVOLV2_URI,
+  CONVOLV2_URI "#Mono",
   instantiate,
   connect_port,
   NULL, // activate,
