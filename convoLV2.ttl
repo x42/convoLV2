@@ -17,7 +17,7 @@
 
 <http://gareus.org/oss/lv2/convoLV2>
 	a lv2:Plugin ;
-	doap:maintainer <http://gareus.org/> ;
+	doap:maintainer <http://gareus.org/rgareus#me> ;
 	doap:name "LV2 Convolution Mono" ;
 	lv2:microVersion 0 ;
 	lv2:minorVersion 2 ;
