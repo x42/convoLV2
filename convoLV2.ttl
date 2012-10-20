@@ -18,8 +18,8 @@
 	a lv2:Plugin;
 	doap:maintainer <http://gareus.org/> ;
 	doap:name "LV2 Convolution Mono";
-	lv2:microVersion: 0;
-	lv2:minorVersion: 2;
+	lv2:microVersion 0;
+	lv2:minorVersion 2;
 	doap:license <http://usefulinc.com/doap/licenses/gpl> ;
 	lv2:requiredFeature urid:map, work:schedule ;
 	lv2:extensionData work:interface , state:interface ;
