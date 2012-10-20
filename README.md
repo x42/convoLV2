@@ -18,10 +18,16 @@ to work, the host must:
  * Pass the option http://lv2plug.in/ns/ext/buf-size#maxBlockLength to
    instantiate()
 
-The plugin works properly, but currently lacks:
+The plugin works properly, but currently lacks any way to change configuration
+settings (e.g. gain, delay, channel mapping).  A very basic GUI is included for
+loading an IR file, since LV2 hosts do not currently support string parameters
+in host generated UIs.
 
- * Any way to change configuration settings (e.g. gain, delay, channel map)
- * A decent GUI (a very basic GUI is included to load an IR file)
+Saving state, including proper file references, is supported via the LV2 state
+extension.
+
+Currently, convoLV2 is known to work in
+[Jalv](http://drobilla.net/software/jalv/) 1.2.0.
 
 Installation & Usage
 --------------------
