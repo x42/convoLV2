@@ -42,7 +42,6 @@
   def(0) \
   def(1)
 
-
 #define ENUMPORT(n) \
   P_OUTPUT ## n = (n*2+2), \
   P_INPUT ## n  = (n*2+3),
@@ -129,7 +128,7 @@ instantiate(const LV2_Descriptor*     descriptor,
     if (o->context == LV2_OPTIONS_INSTANCE &&
         o->key == bufsz_max &&
         o->type == atom_Int) {
-        bufsize = *(const int32_t*)o->value;
+      bufsize = *(const int32_t*)o->value;
     }
   }
 
@@ -140,7 +139,7 @@ instantiate(const LV2_Descriptor*     descriptor,
 
   if (bufsize < 64 || bufsize > 8192 ||
       /* not power of two */ (bufsize & (bufsize - 1))
-     ) {
+      ) {
     fprintf(stderr, "unsupported block-size: %d\n", bufsize);
     fprintf(stderr, "64 <= bs <= 8192 and bs needs to be power of two\n");
     return NULL;
@@ -169,7 +168,6 @@ instantiate(const LV2_Descriptor*     descriptor,
 
   return (LV2_Handle)self;
 }
-
 
 static LV2_Worker_Status
 work(LV2_Handle                  instance,
@@ -379,9 +377,9 @@ run(LV2_Handle instance, uint32_t n_samples)
   }
 
   clv_convolve(self->clv_online, input, output,
-      self->chn_in,
-      self->chn_out,
-      n_samples);
+               self->chn_in,
+               self->chn_out,
+               n_samples);
 }
 
 static void
@@ -415,7 +413,7 @@ save(LV2_Handle                instance,
 
   for (i=0; features[i]; ++i) {
     if (!strcmp(features[i]->URI, LV2_STATE__mapPath)) {
-    map_path = (LV2_State_Map_Path*)features[i]->data;
+      map_path = (LV2_State_Map_Path*)features[i]->data;
     }
   }
 
@@ -499,9 +497,6 @@ restore(LV2_Handle                  instance,
 #endif
   return LV2_STATE_SUCCESS;
 }
-
-
-
 
 static const void*
 extension_data(const char* uri)
