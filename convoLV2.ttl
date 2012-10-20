@@ -22,11 +22,11 @@
 
 <http://gareus.org/oss/lv2/convoLV2#Mono>
 	a lv2:Plugin ;
-	lv2:project <http://gareus.org/oss/lv2/convoLV2> ;
 	doap:name "LV2 Convolution Mono" ;
+	doap:license <http://usefulinc.com/doap/licenses/gpl> ;
 	lv2:microVersion 0 ;
 	lv2:minorVersion 2 ;
-	doap:license <http://usefulinc.com/doap/licenses/gpl> ;
+	lv2:project <http://gareus.org/oss/lv2/convoLV2> ;
 	lv2:requiredFeature urid:map ,
 		work:schedule ,
 		bufsz:powerOf2BlockLength ;
@@ -68,11 +68,14 @@
 
 <http://gareus.org/oss/lv2/convoLV2#Stereo>
 	a lv2:Plugin ;
-	lv2:project <http://gareus.org/oss/lv2/convoLV2> ;
 	doap:name "LV2 Convolution Stereo" ;
 	doap:license <http://usefulinc.com/doap/licenses/gpl> ;
+	lv2:microVersion 0 ;
+	lv2:minorVersion 2 ;
+	lv2:project <http://gareus.org/oss/lv2/convoLV2> ;
 	lv2:requiredFeature urid:map ,
-		work:schedule ;
+		work:schedule ,
+		bufsz:powerOf2BlockLength ;
 	lv2:extensionData work:interface ,
 		state:interface ;
 	lv2:optionalFeature lv2:hardRTCapable ;
@@ -125,11 +128,14 @@
 
 <http://gareus.org/oss/lv2/convoLV2#MonoToStereo>
 	a lv2:Plugin ;
-	lv2:project <http://gareus.org/oss/lv2/convoLV2> ;
 	doap:name "LV2 Convolution Mono=>Stereo" ;
 	doap:license <http://usefulinc.com/doap/licenses/gpl> ;
+	lv2:microVersion 0 ;
+	lv2:minorVersion 2 ;
+	lv2:project <http://gareus.org/oss/lv2/convoLV2> ;
 	lv2:requiredFeature urid:map ,
-		work:schedule ;
+		work:schedule ,
+		bufsz:powerOf2BlockLength ;
 	lv2:extensionData work:interface ,
 		state:interface ;
 	lv2:optionalFeature lv2:hardRTCapable ;
