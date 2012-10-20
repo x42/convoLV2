@@ -16,8 +16,13 @@
 	foaf:homepage <http://gareus.org/> .
 
 <http://gareus.org/oss/lv2/convoLV2>
-	a lv2:Plugin ;
+	a doap:Project ;
 	doap:maintainer <http://gareus.org/rgareus#me> ;
+	doap:name "LV2 Convolution" .
+
+<http://gareus.org/oss/lv2/convoLV2#Mono>
+	a lv2:Plugin ;
+	lv2:project <http://gareus.org/oss/lv2/convoLV2> ;
 	doap:name "LV2 Convolution Mono" ;
 	lv2:microVersion 0 ;
 	lv2:minorVersion 2 ;
@@ -63,7 +68,7 @@
 
 <http://gareus.org/oss/lv2/convoLV2#Stereo>
 	a lv2:Plugin ;
-	doap:maintainer <http://gareus.org/> ;
+	lv2:project <http://gareus.org/oss/lv2/convoLV2> ;
 	doap:name "LV2 Convolution Stereo" ;
 	doap:license <http://usefulinc.com/doap/licenses/gpl> ;
 	lv2:requiredFeature urid:map ,
@@ -120,8 +125,8 @@
 
 <http://gareus.org/oss/lv2/convoLV2#MonoToStereo>
 	a lv2:Plugin ;
-	doap:maintainer <http://gareus.org/> ;
-	doap:name "LV2 Convolution 1in 2out" ;
+	lv2:project <http://gareus.org/oss/lv2/convoLV2> ;
+	doap:name "LV2 Convolution Mono=>Stereo" ;
 	doap:license <http://usefulinc.com/doap/licenses/gpl> ;
 	lv2:requiredFeature urid:map ,
 		work:schedule ;
