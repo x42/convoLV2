@@ -1,4 +1,5 @@
 @prefix atom:  <http://lv2plug.in/ns/ext/atom#> .
+@prefix bufsz: <http://lv2plug.in/ns/ext/buf-size#> .
 @prefix doap:  <http://usefulinc.com/ns/doap#> .
 @prefix foaf:  <http://xmlns.com/foaf/0.1/> .
 @prefix lv2:   <http://lv2plug.in/ns/lv2core#> .
@@ -21,7 +22,9 @@
 	lv2:microVersion 0;
 	lv2:minorVersion 2;
 	doap:license <http://usefulinc.com/doap/licenses/gpl> ;
-	lv2:requiredFeature urid:map, work:schedule ;
+	lv2:requiredFeature urid:map, work:schedule, bufsz:powerOf2BlockLength ;
+	bufsz:minBlockLength 64 ;
+	bufsz:maxBlockLength 8192 ;
 	lv2:extensionData work:interface , state:interface ;
 	lv2:optionalFeature lv2:hardRTCapable ;
 	ui:ui <http://gareus.org/oss/lv2/convoLV2#ui> ;
