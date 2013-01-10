@@ -18,32 +18,33 @@
  * Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#ifndef CONVOLV2_URIS_H
-#define CONVOLV2_URIS_H
+#ifndef CLV2_URIS_H
+#define CLV2_URIS_H
 
 #include "lv2/lv2plug.in/ns/ext/atom/atom.h"
 #include "lv2/lv2plug.in/ns/ext/atom/forge.h"
 #include "lv2/lv2plug.in/ns/ext/urid/urid.h"
 #include "lv2/lv2plug.in/ns/ext/patch/patch.h"
 
-#define CONVOLV2_URI          "http://gareus.org/oss/lv2/convoLV2"
-#define CONVOLV2__file        CONVOLV2_URI "#file"
-#define CONVOLV2__load        CONVOLV2_URI "#load"
-#define CONVOLV2__state       CONVOLV2_URI "#state"
-#define CONVOLV2__uiinit      CONVOLV2_URI "#uiinit"
+#define CONVOLV2_URI "http://gareus.org/oss/lv2/convoLV2"
+
+#define CLV2__impulse CONVOLV2_URI "#impulse"
+#define CLV2__load    CONVOLV2_URI "#load"
+#define CLV2__state   CONVOLV2_URI "#state"
+#define CLV2__uiinit  CONVOLV2_URI "#uiinit"
 
 typedef struct {
 	LV2_URID atom_Blank;
 	LV2_URID atom_Path;
 	LV2_URID atom_String;
+	LV2_URID atom_URID;
 	LV2_URID atom_eventTransfer;
-
-	LV2_URID patch_Set;
-	LV2_URID patch_body;
-
-	LV2_URID clv2_ir_file;
+	LV2_URID clv2_impulse;
 	LV2_URID clv2_state;
 	LV2_URID clv2_uiinit;
+	LV2_URID patch_Set;
+	LV2_URID patch_property;
+	LV2_URID patch_value;
 } ConvoLV2URIs;
 
 static inline void
@@ -52,16 +53,15 @@ map_convolv2_uris(LV2_URID_Map* map, ConvoLV2URIs* uris)
 	uris->atom_Blank         = map->map(map->handle, LV2_ATOM__Blank);
 	uris->atom_Path          = map->map(map->handle, LV2_ATOM__Path);
 	uris->atom_String        = map->map(map->handle, LV2_ATOM__String);
+	uris->atom_URID          = map->map(map->handle, LV2_ATOM__URID);
 	uris->atom_eventTransfer = map->map(map->handle, LV2_ATOM__eventTransfer);
-
+	uris->clv2_impulse       = map->map(map->handle, CLV2__impulse);
+	uris->clv2_state         = map->map(map->handle, CLV2__state);
+	uris->clv2_uiinit        = map->map(map->handle, CLV2__uiinit);
 	uris->patch_Set          = map->map(map->handle, LV2_PATCH__Set);
-	uris->patch_body         = map->map(map->handle, LV2_PATCH__body);
-
-	uris->clv2_ir_file       = map->map(map->handle, CONVOLV2__file);
-	uris->clv2_state         = map->map(map->handle, CONVOLV2__state);
-	uris->clv2_uiinit        = map->map(map->handle, CONVOLV2__uiinit);
+	uris->patch_property     = map->map(map->handle, LV2_PATCH__property);
+	uris->patch_value        = map->map(map->handle, LV2_PATCH__value);
 }
-
 
 static inline bool
 is_object_type(const ConvoLV2URIs* uris, LV2_URID type)
@@ -71,46 +71,39 @@ is_object_type(const ConvoLV2URIs* uris, LV2_URID type)
 
 /**
  * Write a message like the following to @p forge:
- * [
+ * []
  *     a patch:Set ;
- *     patch:body [
- *         clv2_ir_file </home/me/foo.wav> ;
- *     ] ;
- * ]
+ *     patch:property convolv2:impulse ;
+ *     patch:value </home/me/foo.wav> .
  */
 static inline LV2_Atom*
-write_set_file(LV2_Atom_Forge*    forge,
+write_set_file(LV2_Atom_Forge*     forge,
                const ConvoLV2URIs* uris,
-               const char*        filename)
+               const char*         filename)
 {
-	LV2_Atom_Forge_Frame set_frame;
+	LV2_Atom_Forge_Frame frame;
 	LV2_Atom* set = (LV2_Atom*)lv2_atom_forge_blank(
-		forge, &set_frame, 1, uris->patch_Set);
+		forge, &frame, 1, uris->patch_Set);
 
-	lv2_atom_forge_property_head(forge, uris->patch_body, 0);
-	LV2_Atom_Forge_Frame body_frame;
-	lv2_atom_forge_blank(forge, &body_frame, 2, 0);
-
-	lv2_atom_forge_property_head(forge, uris->clv2_ir_file, 0);
+	lv2_atom_forge_property_head(forge, uris->patch_property, 0);
+	lv2_atom_forge_urid(forge, uris->clv2_impulse);
+	lv2_atom_forge_property_head(forge, uris->patch_value, 0);
 	lv2_atom_forge_path(forge, filename, strlen(filename));
 
-	lv2_atom_forge_pop(forge, &body_frame);
-	lv2_atom_forge_pop(forge, &set_frame);
+	lv2_atom_forge_pop(forge, &frame);
 
 	return set;
 }
 
 /**
  * Get the file path from a message like:
- * [
+ * []
  *     a patch:Set ;
- *     patch:body [
- *         clv2_ir_file </home/me/foo.wav> ;
- *     ] ;
- * ]
+ *     patch:property convolv2:impulse ;
+ *     patch:value </home/me/foo.wav> .
  */
 static inline const LV2_Atom*
-read_set_file(const ConvoLV2URIs*     uris,
+read_set_file(const ConvoLV2URIs*    uris,
               const LV2_Atom_Object* obj)
 {
 	if (obj->body.otype != uris->patch_Set) {
@@ -118,23 +111,28 @@ read_set_file(const ConvoLV2URIs*     uris,
 		return NULL;
 	}
 
-	/* Get body of message. */
-	const LV2_Atom_Object* body = NULL;
-	lv2_atom_object_get(obj, uris->patch_body, &body, 0);
-	if (!body) {
+	/* Get property URI. */
+	const LV2_Atom* property = NULL;
+	lv2_atom_object_get(obj, uris->patch_property, &property, 0);
+	if (!property) {
 		fprintf(stderr, "Malformed set message has no body.\n");
 		return NULL;
-	}
-	if (!is_object_type(uris, body->atom.type)) {
-		fprintf(stderr, "Malformed set message has non-object body.\n");
+	} else if (property->type != uris->atom_URID) {
+		fprintf(stderr, "Malformed set message has non-URID property.\n");
+		return NULL;
+	} else if (((LV2_Atom_URID*)property)->body != uris->clv2_impulse) {
+		fprintf(stderr, "Set message for unknown property.\n");
 		return NULL;
 	}
 
-	/* Get file path from body. */
+	/* Get value. */
 	const LV2_Atom* file_path = NULL;
-	lv2_atom_object_get(body, uris->clv2_ir_file, &file_path, 0);
+	lv2_atom_object_get(obj, uris->patch_value, &file_path, 0);
 	if (!file_path) {
-		fprintf(stderr, "Ignored set message with no file path.\n");
+		fprintf(stderr, "Malformed set message has no value.\n");
+		return NULL;
+	} else if (file_path->type != uris->atom_Path) {
+		fprintf(stderr, "Set message value is not a Path.\n");
 		return NULL;
 	}
 

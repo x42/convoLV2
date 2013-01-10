@@ -421,7 +421,7 @@ save(LV2_Handle                instance,
     char fn[1024]; // PATH_MAX
     if (clv_query_setting(self->clv_online, "convolution.ir.file", fn, 1024) > 0 ) {
       char* apath = map_path->abstract_path(map_path->handle, fn);
-      store(handle, self->uris.clv2_ir_file,
+      store(handle, self->uris.clv2_impulse,
             apath, strlen(apath) + 1,
             self->uris.atom_Path,
             LV2_STATE_IS_POD | LV2_STATE_IS_PORTABLE);
@@ -472,7 +472,7 @@ restore(LV2_Handle                  instance,
     }
   }
 
-  value = retrieve(handle, self->uris.clv2_ir_file, &size, &type, &valflags);
+  value = retrieve(handle, self->uris.clv2_impulse, &size, &type, &valflags);
 
   if (value) {
     const char* path = (const char*)value;
