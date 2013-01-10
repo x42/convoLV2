@@ -24,6 +24,8 @@
 #include "convolution.h"
 
 #include "lv2/lv2plug.in/ns/ext/buf-size/buf-size.h"
+#include "lv2/lv2plug.in/ns/ext/log/log.h"
+#include "lv2/lv2plug.in/ns/ext/log/logger.h"
 #include "lv2/lv2plug.in/ns/ext/options/options.h"
 #include "lv2/lv2plug.in/ns/ext/state/state.h"
 #include "lv2/lv2plug.in/ns/ext/worker/worker.h"
@@ -60,9 +62,11 @@ enum {
 
 typedef struct {
   LV2_URID_Map*        map;
-  LV2_Worker_Schedule *schedule;
+  LV2_Worker_Schedule* schedule;
+  LV2_Log_Log*         log;
 
   LV2_Atom_Forge forge;
+  LV2_Log_Logger logger;
 
   float* input[MAX_CHN];
   float* output[MAX_CHN];
@@ -96,6 +100,7 @@ instantiate(const LV2_Descriptor*     descriptor,
   const LV2_Options_Option* options  = NULL;
   LV2_URID_Map*             map      = NULL;
   LV2_Worker_Schedule*      schedule = NULL;
+  LV2_Log_Log*              log      = NULL;
   for (int i = 0; features[i]; ++i) {
     if (!strcmp(features[i]->URI, LV2_URID__map)) {
       map = (LV2_URID_Map*)features[i]->data;
@@ -103,21 +108,23 @@ instantiate(const LV2_Descriptor*     descriptor,
       schedule = (LV2_Worker_Schedule*)features[i]->data;
     } else if (!strcmp(features[i]->URI, LV2_OPTIONS__options)) {
       options = (const LV2_Options_Option*)features[i]->data;
+    } else if (!strcmp(features[i]->URI, LV2_LOG__log)) {
+      log = (LV2_Log_Log*)features[i]->data;
     }
   }
 
+  // Initialise logger (if map is unavailable, will fallback to printf)
+  LV2_Log_Logger logger;
+  lv2_log_logger_init(&logger, map, log);
+
   if (!map) {
-    fprintf(stderr, "Missing feature uri:map.\n");
+    lv2_log_error(&logger, "Missing feature uri:map\n");
     return NULL;
-  }
-
-  if (!schedule) {
-    fprintf(stderr, "Missing feature work:schedule.\n");
+  } else if (!schedule) {
+    lv2_log_error(&logger, "Missing feature work:schedule\n");
     return NULL;
-  }
-
-  if (!options) {
-    fprintf(stderr, "Missing options.\n");
+  } else if (!options) {
+    lv2_log_error(&logger, "Missing options\n");
     return NULL;
   }
 
@@ -133,19 +140,17 @@ instantiate(const LV2_Descriptor*     descriptor,
   }
 
   if (bufsize == 0) {
-    fprintf(stderr, "No maximum buffer size given.\n");
+    lv2_log_error(&logger, "No maximum buffer size given\n");
+    return NULL;
+  } else if (bufsize < 64 || bufsize > 8192) {
+    lv2_log_error(&logger, "Buffer size %u out of range 64..8192\n", bufsize);
+    return NULL;
+  } else if (bufsize & (bufsize - 1)) {
+    lv2_log_error(&logger, "Buffer size %u not a power of two\n", bufsize);
     return NULL;
   }
 
-  if (bufsize < 64 || bufsize > 8192 ||
-      /* not power of two */ (bufsize & (bufsize - 1))
-      ) {
-    fprintf(stderr, "unsupported block-size: %d\n", bufsize);
-    fprintf(stderr, "64 <= bs <= 8192 and bs needs to be power of two\n");
-    return NULL;
-  }
-
-  VERBOSE_printf("using block size: %d\n", bufsize);
+  lv2_log_trace(&logger, "Buffer size: %u\n", bufsize);
 
   convoLV2* self = (convoLV2*)calloc(1, sizeof(convoLV2));
   if (!self) {
@@ -158,6 +163,8 @@ instantiate(const LV2_Descriptor*     descriptor,
 
   self->map = map;
   self->schedule = schedule;
+  self->log = log;
+  self->logger = logger;
   self->bufsize = bufsize;
   self->rate = rate;
   self->chn_in = 1;
@@ -216,8 +223,6 @@ work(LV2_Handle                  instance,
         clv_configure(self->clv_offline, "convolution.ir.file", fn);
         apply = 1;
       }
-    } else {
-      fprintf(stderr, "Unknown message/object type %d\n", obj->body.otype);
     }
   }
 
