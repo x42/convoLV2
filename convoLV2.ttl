@@ -6,6 +6,7 @@
 @prefix lv2:   <http://lv2plug.in/ns/lv2core#> .
 @prefix patch: <http://lv2plug.in/ns/ext/patch#> .
 @prefix pg:    <http://lv2plug.in/ns/ext/port-groups#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix state: <http://lv2plug.in/ns/ext/state#> .
 @prefix ui:    <http://lv2plug.in/ns/extensions/ui#> .
 @prefix urid:  <http://lv2plug.in/ns/ext/urid#> .
