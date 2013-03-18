@@ -29,6 +29,10 @@ else
   CFLAGS+=`pkg-config --cflags lv2 lv2core`
 endif
 
+ifeq ($(shell pkg-config --atleast-version=1.4 lv2 || echo no), no)
+  $(error "LV2 SDK needs to be version 1.4 or later")
+endif
+
 ifeq ($(shell pkg-config --exists sndfile samplerate\
         && test -f /usr/include/zita-convolver.h -o -f /usr/local/include/zita-convolver.h \
         && echo yes), yes)
