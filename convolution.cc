@@ -279,7 +279,6 @@ char *clv_dump_settings (LV2convolv *clv) {
     off+= sprintf(rv + off, "convolution.output.%d=%d\n",     i, clv->chn_out[i]); // 21 + d + d
   }
   off+= sprintf(rv + off, "convolution.size=%u\n", clv->size);                     // 18 + v
-  off+= sprintf(rv + off, "convolution.ir.file=%s\n", clv->ir_fn?clv->ir_fn:"");   // 21 + s
   //fprintf(stderr, "%d / %d \n", off, MAX_CFG_SIZE);
   return rv;
 }
