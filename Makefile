@@ -67,12 +67,12 @@ manifest.ttl: manifest.ttl.in
 	  manifest.ttl.in > manifest.ttl
 
 $(LV2NAME)$(LIB_EXT): lv2.c convolution.cc uris.h
-	$(CXX) $(CXXFLAGS) \
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) \
 	  -o $(LV2NAME)$(LIB_EXT) lv2.c convolution.cc \
 	  -shared $(LV2LDFLAGS) $(LDFLAGS) $(LOADLIBES)
 
 $(LV2GUI)$(LIB_EXT): ui.c uris.h
-	$(CXX) $(CXXFLAGS) $(GTKCFLAGS) \
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(GTKCFLAGS) \
 	  -o $(LV2GUI)$(LIB_EXT) ui.c \
 		-shared $(LV2LDFLAGS) $(LDFLAGS) $(GTKLIBS)
 
