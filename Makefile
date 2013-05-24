@@ -1,6 +1,6 @@
 #!/usr/bin/make -f
 
-# these can be overrideen using make variables. e.g.
+# these can be overridden using make variables. e.g.
 #   make CXXFLAGS=-O2
 #   make install DESTDIR=$(CURDIR)/debian/convoLV2 PREFIX=/usr
 #
@@ -87,7 +87,7 @@ install: all
 
 uninstall:
 	rm -f $(DESTDIR)$(LV2DIR)/$(BUNDLE)/manifest.ttl
-	rm -f $(DESTDIR)$(LV2DIR)/$(BUNDLE)/*.ttl
+	rm -f $(DESTDIR)$(LV2DIR)/$(BUNDLE)/$(LV2NAME).ttl
 	rm -f $(DESTDIR)$(LV2DIR)/$(BUNDLE)/$(LV2NAME)$(LIB_EXT)
 	rm -f $(DESTDIR)$(LV2DIR)/$(BUNDLE)/$(LV2GUI)$(LIB_EXT)
 	-rmdir $(DESTDIR)$(LV2DIR)/$(BUNDLE)
