@@ -151,7 +151,7 @@ instantiate(const LV2UI_Descriptor*   descriptor,
 
 	LV2_Atom_Forge_Frame set_frame;
 	LV2_Atom* msg = (LV2_Atom*)lv2_atom_forge_blank(
-		&ui->forge, &set_frame, 1, ui->uris.clv2_uiinit);
+		&ui->forge, &set_frame, 1, ui->uris.patch_Get);
 	lv2_atom_forge_pop(&ui->forge, &set_frame);
 
 	ui->write(ui->controller, 0, lv2_atom_total_size(msg),

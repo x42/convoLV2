@@ -364,7 +364,7 @@ run(LV2_Handle instance, uint32_t n_samples)
     LV2_ATOM_SEQUENCE_FOREACH(self->control_port, ev) {
       const LV2_Atom_Object* obj = (LV2_Atom_Object*)&ev->body;
       ConvoLV2URIs* uris = &self->uris;
-      if (obj->body.otype == uris->clv2_uiinit) {
+      if (obj->body.otype == uris->patch_Get) {
         self->flag_notify_ui = 0;
         inform_ui(instance);
       } else {

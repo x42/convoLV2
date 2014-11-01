@@ -30,7 +30,6 @@
 #define CLV2__impulse CONVOLV2_URI "#impulse"
 #define CLV2__load    CONVOLV2_URI "#load"
 #define CLV2__state   CONVOLV2_URI "#state"
-#define CLV2__uiinit  CONVOLV2_URI "#uiinit"
 
 typedef struct {
 	LV2_URID atom_Blank;
@@ -40,7 +39,7 @@ typedef struct {
 	LV2_URID atom_eventTransfer;
 	LV2_URID clv2_impulse;
 	LV2_URID clv2_state;
-	LV2_URID clv2_uiinit;
+	LV2_URID patch_Get;
 	LV2_URID patch_Set;
 	LV2_URID patch_property;
 	LV2_URID patch_value;
@@ -56,7 +55,7 @@ map_convolv2_uris(LV2_URID_Map* map, ConvoLV2URIs* uris)
 	uris->atom_eventTransfer = map->map(map->handle, LV2_ATOM__eventTransfer);
 	uris->clv2_impulse       = map->map(map->handle, CLV2__impulse);
 	uris->clv2_state         = map->map(map->handle, CLV2__state);
-	uris->clv2_uiinit        = map->map(map->handle, CLV2__uiinit);
+	uris->patch_Get          = map->map(map->handle, LV2_PATCH__Get);
 	uris->patch_Set          = map->map(map->handle, LV2_PATCH__Set);
 	uris->patch_property     = map->map(map->handle, LV2_PATCH__property);
 	uris->patch_value        = map->map(map->handle, LV2_PATCH__value);
