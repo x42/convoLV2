@@ -1,0 +1,18 @@
+
+clv2:ui
+	a ui:GtkUI ;
+	lv2:requiredFeature urid:map ;
+	ui:portNotification [
+		ui:plugin clv2:Mono ;
+		lv2:symbol "notify" ;
+		ui:notifyType atom:Blank
+	] , [
+		ui:plugin clv2:Stereo ;
+		lv2:symbol "notify" ;
+		ui:notifyType atom:Blank
+	] , [
+		ui:plugin clv2:MonoToStereo ;
+		lv2:symbol "notify" ;
+		ui:notifyType atom:Blank
+	] .
+

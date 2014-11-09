@@ -1,5 +1,8 @@
 cscope.*
+*.swp
 tags
+
 *.o
 *.so
 manifest.ttl
+convoLV2.ttl

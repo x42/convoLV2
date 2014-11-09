@@ -8,6 +8,7 @@ OPTIMIZATIONS ?= -msse -msse2 -mfpmath=sse -ffast-math -fomit-frame-pointer -O3 
 PREFIX ?= /usr/local
 CXXFLAGS ?= $(OPTIMIZATIONS) -Wall
 LIBDIR ?= lib
+BUILDGTK ?= yes
 
 ###############################################################################
 
@@ -41,8 +42,12 @@ ifneq ($(shell pkg-config --exists sndfile samplerate\
   $(error "libzita-convolver3, libsndfile and libsamplerate are required")
 endif
 
-ifeq ($(shell pkg-config --exists glib-2.0 gtk+-2.0 || echo no), no)
-  $(error "This plugin requires glib-2.0 and gtk+-2.0")
+ifneq ($(BUILDGTK), no)
+  ifeq ($(shell pkg-config --exists glib-2.0 gtk+-2.0 || echo no), no)
+    $(warning "The optional plugin GUI requires glib-2.0 and gtk+-2.0")
+    $(warning "call  make BUILDGTK=no  to disable the GUI.")
+    $(error "Aborting build.")
+  endif
 endif
 
 
@@ -55,16 +60,31 @@ LOADLIBES = -lm -lzita-convolver `pkg-config --libs sndfile samplerate`
 GTKCFLAGS = `pkg-config --cflags gtk+-2.0`
 GTKLIBS   = `pkg-config --libs gtk+-2.0`
 
+targets= $(LV2NAME)$(LIB_EXT)
+
+ifneq ($(BUILDGTK), no)
+	targets+=$(LV2GUI)$(LIB_EXT)
+endif
 
 # build target definitions
 
 default: all
 
-all: manifest.ttl $(LV2NAME)$(LIB_EXT) $(LV2GUI)$(LIB_EXT)
+all: manifest.ttl $(LV2NAME).ttl $(targets)
 
-manifest.ttl: manifest.ttl.in
+manifest.ttl: lv2ttl/manifest.ttl.in lv2ttl/manifest.gui.ttl.in
 	sed "s/@LV2NAME@/$(LV2NAME)/;s/@LV2GUI@/$(LV2GUI)/;s/@LIB_EXT@/$(LIB_EXT)/" \
-	  manifest.ttl.in > manifest.ttl
+	  lv2ttl/manifest.ttl.in > manifest.ttl
+ifneq ($(BUILDGTK), no)
+	sed "s/@LV2NAME@/$(LV2NAME)/;s/@LV2GUI@/$(LV2GUI)/;s/@LIB_EXT@/$(LIB_EXT)/" \
+		lv2ttl/manifest.gui.ttl.in >> manifest.ttl
+endif
+
+$(LV2NAME).ttl: lv2ttl/$(LV2NAME).ttl.in lv2ttl/$(LV2NAME).gui.ttl.in
+	cat lv2ttl/$(LV2NAME).ttl.in > $(LV2NAME).ttl
+ifneq ($(BUILDGTK), no)
+	cat lv2ttl/$(LV2NAME).gui.ttl.in >> $(LV2NAME).ttl
+endif
 
 $(LV2NAME)$(LIB_EXT): lv2.c convolution.cc uris.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) \
@@ -81,8 +101,7 @@ $(LV2GUI)$(LIB_EXT): ui.c uris.h
 
 install: all
 	install -d $(DESTDIR)$(LV2DIR)/$(BUNDLE)
-	install -m755 $(LV2NAME)$(LIB_EXT) $(DESTDIR)$(LV2DIR)/$(BUNDLE)
-	install -m755 $(LV2GUI)$(LIB_EXT) $(DESTDIR)$(LV2DIR)/$(BUNDLE)
+	install -m755 $(targets) $(DESTDIR)$(LV2DIR)/$(BUNDLE)
 	install -m644 manifest.ttl $(LV2NAME).ttl $(DESTDIR)$(LV2DIR)/$(BUNDLE)
 
 uninstall:
@@ -93,6 +112,6 @@ uninstall:
 	-rmdir $(DESTDIR)$(LV2DIR)/$(BUNDLE)
 
 clean:
-	rm -f manifest.ttl $(LV2NAME)$(LIB_EXT) $(LV2GUI)$(LIB_EXT)
+	rm -f manifest.ttl $(LV2NAME).ttl $(LV2NAME)$(LIB_EXT) $(LV2GUI)$(LIB_EXT)
 
 .PHONY: clean all install uninstall
