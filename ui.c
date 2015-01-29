@@ -128,6 +128,7 @@ instantiate(const LV2UI_Descriptor*   descriptor,
 	ui->box        = NULL;
 	ui->btn_load   = NULL;
 	ui->label      = NULL;
+	ui->filename   = NULL;
 
 	*widget = NULL;
 
