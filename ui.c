@@ -38,6 +38,7 @@ typedef struct {
 	GtkWidget* btn_load;
 
 	GtkWidget* label;
+	char *filename;
 } ConvoLV2UI;
 
 /******************************************************************************
@@ -59,14 +60,21 @@ on_load_clicked(GtkWidget* widget,
 		GTK_STOCK_OPEN, GTK_RESPONSE_ACCEPT,
 		NULL);
 
+	if (ui->filename) {
+		gtk_file_chooser_set_filename (GTK_FILE_CHOOSER (dialog), ui->filename);
+	}
+
 	/* Run the dialog, and return if it is cancelled. */
 	if (gtk_dialog_run(GTK_DIALOG(dialog)) != GTK_RESPONSE_ACCEPT) {
 		gtk_widget_destroy(dialog);
 		return;
 	}
 
+	if (ui->filename) {
+		g_free(ui->filename);
+	}
 	/* Get the file path from the dialog. */
-	char* filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
+	ui->filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
 
 	/* Got what we need, destroy the dialog. */
 	gtk_widget_destroy(dialog);
@@ -75,13 +83,11 @@ on_load_clicked(GtkWidget* widget,
 	uint8_t obj_buf[OBJ_BUF_SIZE];
 	lv2_atom_forge_set_buffer(&ui->forge, obj_buf, OBJ_BUF_SIZE);
 
-	LV2_Atom* msg = write_set_file(&ui->forge, &ui->uris, filename);
+	LV2_Atom* msg = write_set_file(&ui->forge, &ui->uris, ui->filename);
 
 	ui->write(ui->controller, 0, lv2_atom_total_size(msg),
 	          ui->uris.atom_eventTransfer,
 	          msg);
-
-	g_free(filename);
 }
 
 /******************************************************************************
@@ -166,6 +172,9 @@ static void
 cleanup(LV2UI_Handle handle)
 {
 	ConvoLV2UI* ui = (ConvoLV2UI*)handle;
+	if (ui->filename) {
+		g_free(ui->filename);
+	}
 	gtk_widget_destroy(ui->btn_load);
 	free(ui);
 }
