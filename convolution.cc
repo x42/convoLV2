@@ -378,6 +378,13 @@ int clv_initialize (
     return -1;
   }
 
+#ifdef NOGUIFORASSIGNMENTS
+  // reset modulo remap
+  for (c = 0; c < MAX_CHANNEL_MAPS; ++c) {
+    clv->ir_chan[c] = c+1;
+  }
+#endif
+
   VERBOSE_printf("convoLV2: CFG %din, %dout | IR: %dchn, %dsamples\n",
       in_channel_cnt, out_channel_cnt, nchan, nfram);
 
@@ -398,9 +405,10 @@ int clv_initialize (
       return -1;
 #else
       clv->ir_chan[c] = ((clv->ir_chan[c]-1)%nchan)+1;
-      VERBOSE_printf("convoLV2: using IR-file channel %d\n", clv->ir_chan[c]);
+      VERBOSE_printf("convoLV2: modulo re-map IR-file channel %d\n", clv->ir_chan[c]);
 #endif
     }
+
     if (clv->ir_delay[c] < 0) {
       fprintf(stderr, "convoLV2: invalid delay; expected: 0 <= %d\n", clv->ir_delay[c]);
       free(p); free(gb);
