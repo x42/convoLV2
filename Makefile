@@ -8,7 +8,7 @@ OPTIMIZATIONS ?= -msse -msse2 -mfpmath=sse -ffast-math -fomit-frame-pointer -O3 
 PREFIX ?= /usr/local
 CXXFLAGS ?= $(OPTIMIZATIONS) -Wall
 LIBDIR ?= lib
-BUILDGTK ?= yes
+BUILDGTK ?= no
 
 ###############################################################################
 
