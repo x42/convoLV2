@@ -157,7 +157,7 @@ instantiate(const LV2UI_Descriptor*   descriptor,
 	lv2_atom_forge_set_buffer(&ui->forge, obj_buf, OBJ_BUF_SIZE);
 
 	LV2_Atom_Forge_Frame set_frame;
-	LV2_Atom* msg = (LV2_Atom*)lv2_atom_forge_blank(
+	LV2_Atom* msg = (LV2_Atom*)x_forge_object(
 		&ui->forge, &set_frame, 1, ui->uris.patch_Get);
 	lv2_atom_forge_pop(&ui->forge, &set_frame);
 
@@ -191,7 +191,7 @@ port_event(LV2UI_Handle handle,
 	if (format == ui->uris.atom_eventTransfer) {
 		LV2_Atom* atom = (LV2_Atom*)buffer;
 
-		if (atom->type == ui->uris.atom_Blank) {
+		if (atom->type == ui->uris.atom_Blank || atom->type == ui->uris.atom_Object) {
 			LV2_Atom_Object* obj      = (LV2_Atom_Object*)atom;
 			const LV2_Atom*  file_uri = read_set_file(&ui->uris, obj);
 			if (!file_uri) {

@@ -31,8 +31,15 @@
 #define CLV2__load    CONVOLV2_URI "#load"
 #define CLV2__state   CONVOLV2_URI "#state"
 
+#ifdef HAVE_LV2_1_8
+#define x_forge_object lv2_atom_forge_object
+#else
+#define x_forge_object lv2_atom_forge_blank
+#endif
+
 typedef struct {
 	LV2_URID atom_Blank;
+	LV2_URID atom_Object;
 	LV2_URID atom_Path;
 	LV2_URID atom_String;
 	LV2_URID atom_URID;
@@ -49,6 +56,7 @@ static inline void
 map_convolv2_uris(LV2_URID_Map* map, ConvoLV2URIs* uris)
 {
 	uris->atom_Blank         = map->map(map->handle, LV2_ATOM__Blank);
+	uris->atom_Object        = map->map(map->handle, LV2_ATOM__Object);
 	uris->atom_Path          = map->map(map->handle, LV2_ATOM__Path);
 	uris->atom_String        = map->map(map->handle, LV2_ATOM__String);
 	uris->atom_URID          = map->map(map->handle, LV2_ATOM__URID);
@@ -59,12 +67,6 @@ map_convolv2_uris(LV2_URID_Map* map, ConvoLV2URIs* uris)
 	uris->patch_Set          = map->map(map->handle, LV2_PATCH__Set);
 	uris->patch_property     = map->map(map->handle, LV2_PATCH__property);
 	uris->patch_value        = map->map(map->handle, LV2_PATCH__value);
-}
-
-static inline bool
-is_object_type(const ConvoLV2URIs* uris, LV2_URID type)
-{
-	return type == uris->atom_Blank;
 }
 
 /**
@@ -80,7 +82,7 @@ write_set_file(LV2_Atom_Forge*     forge,
                const char*         filename)
 {
 	LV2_Atom_Forge_Frame frame;
-	LV2_Atom* set = (LV2_Atom*)lv2_atom_forge_blank(
+	LV2_Atom* set = (LV2_Atom*)x_forge_object(
 		forge, &frame, 1, uris->patch_Set);
 
 	lv2_atom_forge_property_head(forge, uris->patch_property, 0);

@@ -56,6 +56,10 @@ endif
 override CXXFLAGS +=-fPIC
 override CXXFLAGS +=`pkg-config --cflags glib-2.0 lv2 sndfile samplerate`
 
+ifeq ($(shell pkg-config --atleast-version=1.8.1 lv2 && echo yes), yes)
+	override CXXFLAGS += -DHAVE_LV2_1_8
+endif
+
 LOADLIBES = -lm -lzita-convolver `pkg-config --libs sndfile samplerate`
 GTKCFLAGS = `pkg-config --cflags gtk+-2.0`
 GTKLIBS   = `pkg-config --libs gtk+-2.0`
