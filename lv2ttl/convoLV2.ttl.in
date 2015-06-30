@@ -33,7 +33,7 @@ clv2:Mono
 	doap:name "LV2 Convolution Mono" ;
 	doap:license <http://usefulinc.com/doap/licenses/gpl> ;
 	lv2:microVersion 0 ;
-	lv2:minorVersion 2 ;
+	lv2:minorVersion 4 ;
 	lv2:project <http://gareus.org/oss/lv2/convoLV2> ;
 	lv2:requiredFeature urid:map ,
 		work:schedule ,
@@ -84,7 +84,7 @@ clv2:Stereo
 	doap:name "LV2 Convolution Stereo" ;
 	doap:license <http://usefulinc.com/doap/licenses/gpl> ;
 	lv2:microVersion 0 ;
-	lv2:minorVersion 2 ;
+	lv2:minorVersion 4 ;
 	lv2:project <http://gareus.org/oss/lv2/convoLV2> ;
 	lv2:requiredFeature urid:map ,
 		work:schedule ,
@@ -149,7 +149,7 @@ clv2:MonoToStereo
 	doap:name "LV2 Convolution Mono=>Stereo" ;
 	doap:license <http://usefulinc.com/doap/licenses/gpl> ;
 	lv2:microVersion 0 ;
-	lv2:minorVersion 2 ;
+	lv2:minorVersion 4 ;
 	lv2:project <http://gareus.org/oss/lv2/convoLV2> ;
 	lv2:requiredFeature urid:map ,
 		work:schedule ,
