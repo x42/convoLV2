@@ -75,7 +75,9 @@ clv2:Mono
 		lv2:index 3 ;
 		lv2:symbol "in" ;
 		lv2:name "In"
-	] .
+	] ;
+	rdfs:comment "Zero latency Mono Signal Convolution Processor"
+	.
 
 clv2:Stereo
 	a lv2:Plugin ;
@@ -138,7 +140,9 @@ clv2:Stereo
 		lv2:symbol "in_2" ;
 		lv2:name "InR" ;
 		lv2:designation pg:right
-	] .
+	] ;
+	rdfs:comment "Zero latency Stereo Signal Convolution Processor;  2 signals, 2 chan IR (L -> L, R -> R)"
+	.
 
 clv2:MonoToStereo
 	a lv2:Plugin ;
@@ -193,4 +197,6 @@ clv2:MonoToStereo
 		lv2:symbol "out_2" ;
 		lv2:name "OutR" ;
 		lv2:designation pg:right
-	] .
+	] ;
+	rdfs:comment "Zero latency True Stereo Signal Convolution Processor; 2 signals, 4 chan IR (L -> L, R -> R, L -> R, R -> L)"
+	.
