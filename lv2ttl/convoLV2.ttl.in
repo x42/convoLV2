@@ -141,7 +141,7 @@ clv2:Stereo
 		lv2:name "InR" ;
 		lv2:designation pg:right
 	] ;
-	rdfs:comment "Zero latency Stereo Signal Convolution Processor;  2 signals, 2 chan IR (L -> L, R -> R)"
+	rdfs:comment "Zero latency Mono to Stereo Signal Convolution Processor; 2 chan IR"
 	.
 
 clv2:MonoToStereo
