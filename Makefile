@@ -11,6 +11,7 @@ LIBDIR ?= lib
 BUILDGTK ?= no
 
 ###############################################################################
+BUILDDIR=build/
 
 LV2DIR ?= $(PREFIX)/$(LIBDIR)/lv2
 LV2NAME=convoLV2
@@ -79,41 +80,43 @@ endif
 GTKCFLAGS = `pkg-config --cflags gtk+-2.0`
 GTKLIBS   = `pkg-config --libs gtk+-2.0`
 
-targets= $(LV2NAME)$(LIB_EXT)
+targets= $(BUILDDIR)$(LV2NAME)$(LIB_EXT)
 
 ifneq ($(BUILDGTK), no)
-	targets+=$(LV2GUI)$(LIB_EXT)
+	targets+=$(BUILDDIR)$(LV2GUI)$(LIB_EXT)
 endif
 
 # build target definitions
 
 default: all
 
-all: manifest.ttl $(LV2NAME).ttl $(targets)
+all: $(BUILDDIR)manifest.ttl $(BUILDDIR)$(LV2NAME).ttl $(targets)
 
-manifest.ttl: lv2ttl/manifest.ttl.in lv2ttl/manifest.gui.ttl.in
+$(BUILDDIR)manifest.ttl: lv2ttl/manifest.ttl.in lv2ttl/manifest.gui.ttl.in
+	@mkdir -p $(BUILDDIR)
 	sed "s/@LV2NAME@/$(LV2NAME)/;s/@LV2GUI@/$(LV2GUI)/;s/@LIB_EXT@/$(LIB_EXT)/" \
-	  lv2ttl/manifest.ttl.in > manifest.ttl
+	  lv2ttl/manifest.ttl.in > $(BUILDDIR)manifest.ttl
 ifneq ($(BUILDGTK), no)
 	sed "s/@LV2NAME@/$(LV2NAME)/;s/@LV2GUI@/$(LV2GUI)/;s/@LIB_EXT@/$(LIB_EXT)/" \
 		lv2ttl/manifest.gui.ttl.in >> manifest.ttl
 endif
 
-$(LV2NAME).ttl: lv2ttl/$(LV2NAME).ttl.in lv2ttl/$(LV2NAME).gui.ttl.in
-	cat lv2ttl/$(LV2NAME).ttl.in > $(LV2NAME).ttl
+$(BUILDDIR)$(LV2NAME).ttl: lv2ttl/$(LV2NAME).ttl.in lv2ttl/$(LV2NAME).gui.ttl.in
+	@mkdir -p $(BUILDDIR)
+	cat lv2ttl/$(LV2NAME).ttl.in > $(BUILDDIR)$(LV2NAME).ttl
 ifneq ($(BUILDGTK), no)
-	cat lv2ttl/$(LV2NAME).gui.ttl.in >> $(LV2NAME).ttl
+	cat lv2ttl/$(LV2NAME).gui.ttl.in >> $(BUILDDIR)$(LV2NAME).ttl
 endif
 
-$(LV2NAME)$(LIB_EXT): lv2.c convolution.cc uris.h
+$(BUILDDIR)$(LV2NAME)$(LIB_EXT): lv2.c convolution.cc uris.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) \
-	  -o $(LV2NAME)$(LIB_EXT) lv2.c convolution.cc \
+	  -o $(BUILDDIR)$(LV2NAME)$(LIB_EXT) lv2.c convolution.cc \
 	  $(LIBZITACONVOLVER) \
 	  -shared $(LV2LDFLAGS) $(LDFLAGS) $(LOADLIBES)
 
-$(LV2GUI)$(LIB_EXT): ui.c uris.h
+$(BUILDDIR)$(LV2GUI)$(LIB_EXT): ui.c uris.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(GTKCFLAGS) \
-	  -o $(LV2GUI)$(LIB_EXT) ui.c \
+	  -o $(BUILDDIR)$(LV2GUI)$(LIB_EXT) ui.c \
 		-shared $(LV2LDFLAGS) $(LDFLAGS) $(GTKLIBS)
 
 
@@ -122,7 +125,7 @@ $(LV2GUI)$(LIB_EXT): ui.c uris.h
 install: all
 	install -d $(DESTDIR)$(LV2DIR)/$(BUNDLE)
 	install -m755 $(targets) $(DESTDIR)$(LV2DIR)/$(BUNDLE)
-	install -m644 manifest.ttl $(LV2NAME).ttl $(DESTDIR)$(LV2DIR)/$(BUNDLE)
+	install -m644 $(BUILDDIR)manifest.ttl $(BUILDDIR)$(LV2NAME).ttl $(DESTDIR)$(LV2DIR)/$(BUNDLE)
 
 uninstall:
 	rm -f $(DESTDIR)$(LV2DIR)/$(BUNDLE)/manifest.ttl
@@ -132,6 +135,9 @@ uninstall:
 	-rmdir $(DESTDIR)$(LV2DIR)/$(BUNDLE)
 
 clean:
-	rm -f manifest.ttl $(LV2NAME).ttl $(LV2NAME)$(LIB_EXT) $(LV2GUI)$(LIB_EXT)
+	rm -f $(BUILDDIR)manifest.ttl $(BUILDDIR)$(LV2NAME).ttl \
+		$(BUILDDIR)$(LV2NAME)$(LIB_EXT) $(BUILDDIR)$(LV2GUI)$(LIB_EXT)
+	rm -rf $(BUILDDIR)*.dSYM
+	-test -d $(BUILDDIR) && rmdir $(BUILDDIR) || true
 
 .PHONY: clean all install uninstall

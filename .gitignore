@@ -3,8 +3,4 @@ cscope.*
 tags
 
 *.o
-*.so
-*.dll
-*.dylib
-manifest.ttl
-convoLV2.ttl
+/build
