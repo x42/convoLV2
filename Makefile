@@ -26,6 +26,15 @@ else
   LIB_EXT=.so
 endif
 
+ifneq ($(XWIN),)
+  CC=$(XWIN)-gcc
+  CXX=$(XWIN)-g++
+  LV2LDFLAGS=-Wl,-Bstatic -Wl,-Bdynamic -Wl,--as-needed -lpthread
+  LIB_EXT=.dll
+  BUILDGTK=no
+  override LDFLAGS += -static-libgcc -static-libstdc++
+endif
+
 # check for build-dependencies
 
 ifeq ($(shell pkg-config --exists lv2 || echo no), no)
@@ -37,9 +46,8 @@ ifeq ($(shell pkg-config --atleast-version=1.4 lv2 || echo no), no)
 endif
 
 ifneq ($(shell pkg-config --exists sndfile samplerate\
-        && test -f /usr/include/zita-convolver.h -o -f /usr/local/include/zita-convolver.h \
         && echo yes), yes)
-  $(error "libzita-convolver3, libsndfile and libsamplerate are required")
+  $(error "libsndfile and libsamplerate are required")
 endif
 
 ifneq ($(BUILDGTK), no)
@@ -50,17 +58,24 @@ ifneq ($(BUILDGTK), no)
   endif
 endif
 
+ifeq ($(LIBZITACONVOLVER),)
+  ifeq ($(shell test -f /usr/include/zita-convolver.h -o -f /usr/local/include/zita-convolver.h || echo no ), no)
+    $(error "libzita-convolver3, is required")
+  endif
+  LOADLIBES += -lzita-convolver
+endif
 
 # add library dependent flags and libs
 
 override CXXFLAGS +=-fPIC
 override CXXFLAGS +=`pkg-config --cflags glib-2.0 lv2 sndfile samplerate`
+override LOADLIBES +=`pkg-config --libs sndfile samplerate` -lm
 
 ifeq ($(shell pkg-config --atleast-version=1.8.1 lv2 && echo yes), yes)
 	override CXXFLAGS += -DHAVE_LV2_1_8
 endif
 
-LOADLIBES = -lm -lzita-convolver `pkg-config --libs sndfile samplerate`
+
 GTKCFLAGS = `pkg-config --cflags gtk+-2.0`
 GTKLIBS   = `pkg-config --libs gtk+-2.0`
 
@@ -93,6 +108,7 @@ endif
 $(LV2NAME)$(LIB_EXT): lv2.c convolution.cc uris.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) \
 	  -o $(LV2NAME)$(LIB_EXT) lv2.c convolution.cc \
+	  $(LIBZITACONVOLVER) \
 	  -shared $(LV2LDFLAGS) $(LDFLAGS) $(LOADLIBES)
 
 $(LV2GUI)$(LIB_EXT): ui.c uris.h
