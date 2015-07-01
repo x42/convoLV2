@@ -409,15 +409,6 @@ int clv_initialize (
 #endif
     }
 
-    if (clv->ir_delay[c] < 0) {
-      fprintf(stderr, "convoLV2: invalid delay; expected: 0 <= %d\n", clv->ir_delay[c]);
-      free(p); free(gb);
-      delete(clv->convproc);
-      clv->convproc = NULL;
-      g_atomic_int_set(&fftw_guard, 0);
-      return -1;
-    }
-
     for (i=0; i < nfram; ++i) gb[i] = p[i*nchan + clv->ir_chan[c]-1] * clv->ir_gain[c];
 
     VERBOSE_printf("convoLV2: SET in %d -> out %d [IR chn:%d gain:%+.3f dly:%d]\n",
