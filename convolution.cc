@@ -41,6 +41,7 @@
 #include <math.h>
 #include <string.h>
 #include <stdint.h>
+#include <pthread.h>
 
 #include <zita-convolver.h>
 #include <sndfile.h>
@@ -51,8 +52,7 @@
 #define SRC_QUALITY SRC_SINC_MEDIUM_QUALITY
 #endif
 
-#include <glib.h>
-static volatile gint fftw_guard = 0; // http://www.fftw.org/doc/Thread-safety.html
+static pthread_mutex_t fftw_planner_lock = PTHREAD_MUTEX_INITIALIZER;
 
 struct LV2convolv {
   Convproc *convproc;
@@ -339,9 +339,7 @@ int clv_initialize (
     return -1;
   }
 
-  while (!g_atomic_int_compare_and_exchange(&fftw_guard, 0, 1)) {
-    usleep (1000);
-  }
+  pthread_mutex_lock(&fftw_planner_lock);
 
   clv->convproc = new Convproc;
   clv->convproc->set_options (options);
@@ -358,7 +356,7 @@ int clv_initialize (
     fprintf (stderr, "convoLV2: Cannot initialize convolution engine.\n");
     delete(clv->convproc);
     clv->convproc = NULL;
-    g_atomic_int_set(&fftw_guard, 0);
+    pthread_mutex_unlock(&fftw_planner_lock);
     return -1;
   }
 
@@ -366,7 +364,7 @@ int clv_initialize (
     fprintf(stderr, "convoLV2: failed to read IR.\n");
     delete(clv->convproc);
     clv->convproc = NULL;
-    g_atomic_int_set(&fftw_guard, 0);
+    pthread_mutex_unlock(&fftw_planner_lock);
     return -1;
   }
 
@@ -374,7 +372,7 @@ int clv_initialize (
   if (!gb) {
     fprintf (stderr, "convoLV2: memory allocation failed for convolution buffer.\n");
     free(p);
-    g_atomic_int_set(&fftw_guard, 0);
+    pthread_mutex_unlock(&fftw_planner_lock);
     return -1;
   }
 
@@ -401,7 +399,7 @@ int clv_initialize (
       free(p); free(gb);
       delete(clv->convproc);
       clv->convproc = NULL;
-      g_atomic_int_set(&fftw_guard, 0);
+      pthread_mutex_unlock(&fftw_planner_lock);
       return -1;
 #else
       clv->ir_chan[c] = ((clv->ir_chan[c]-1)%nchan)+1;
@@ -435,11 +433,11 @@ int clv_initialize (
     fprintf(stderr, "convoLV2: Cannot start processing.\n");
     delete(clv->convproc);
     clv->convproc = NULL;
-    g_atomic_int_set(&fftw_guard, 0);
+    pthread_mutex_unlock(&fftw_planner_lock);
     return -1;
   }
 
-  g_atomic_int_set(&fftw_guard, 0);
+  pthread_mutex_unlock(&fftw_planner_lock);
   return 0;
 }
 
