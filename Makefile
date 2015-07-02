@@ -51,12 +51,14 @@ ifneq ($(shell pkg-config --exists sndfile samplerate\
   $(error "libsndfile and libsamplerate are required")
 endif
 
+CLV2UI=
 ifneq ($(BUILDGTK), no)
   ifeq ($(shell pkg-config --exists glib-2.0 gtk+-2.0 || echo no), no)
     $(warning "The optional plugin GUI requires glib-2.0 and gtk+-2.0")
     $(warning "call  make BUILDGTK=no  to disable the GUI.")
     $(error "Aborting build.")
   endif
+	CLV2UI=ui:ui clv2:ui;
 endif
 
 ifeq ($(LIBZITACONVOLVER),)
@@ -98,12 +100,13 @@ $(BUILDDIR)manifest.ttl: lv2ttl/manifest.ttl.in lv2ttl/manifest.gui.ttl.in
 	  lv2ttl/manifest.ttl.in > $(BUILDDIR)manifest.ttl
 ifneq ($(BUILDGTK), no)
 	sed "s/@LV2NAME@/$(LV2NAME)/;s/@LV2GUI@/$(LV2GUI)/;s/@LIB_EXT@/$(LIB_EXT)/" \
-		lv2ttl/manifest.gui.ttl.in >> manifest.ttl
+		lv2ttl/manifest.gui.ttl.in >> $(BUILDDIR)manifest.ttl
 endif
 
 $(BUILDDIR)$(LV2NAME).ttl: lv2ttl/$(LV2NAME).ttl.in lv2ttl/$(LV2NAME).gui.ttl.in
 	@mkdir -p $(BUILDDIR)
-	cat lv2ttl/$(LV2NAME).ttl.in > $(BUILDDIR)$(LV2NAME).ttl
+	sed "s/@CLV2UI@/$(CLV2UI)/" \
+		lv2ttl/$(LV2NAME).ttl.in > $(BUILDDIR)$(LV2NAME).ttl
 ifneq ($(BUILDGTK), no)
 	cat lv2ttl/$(LV2NAME).gui.ttl.in >> $(BUILDDIR)$(LV2NAME).ttl
 endif

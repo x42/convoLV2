@@ -43,7 +43,7 @@ clv2:Mono
 	lv2:extensionData work:interface ,
 		state:interface ;
 	lv2:optionalFeature lv2:hardRTCapable ;
-	ui:ui clv2:ui ;
+	@CLV2UI@
 	patch:writable clv2:impulse ;
 	lv2:port [
 		a atom:AtomPort ,
@@ -92,7 +92,7 @@ clv2:Stereo
 	lv2:extensionData work:interface ,
 		state:interface ;
 	lv2:optionalFeature lv2:hardRTCapable ;
-	ui:ui clv2:ui ;
+	@CLV2UI@
 	patch:writable clv2:impulse ;
 	lv2:port [
 		a atom:AtomPort ,
@@ -157,7 +157,7 @@ clv2:MonoToStereo
 	lv2:extensionData work:interface ,
 		state:interface ;
 	lv2:optionalFeature lv2:hardRTCapable ;
-	ui:ui clv2:ui ;
+	@CLV2UI@
 	patch:writable clv2:impulse ;
 	lv2:port [
 		a atom:AtomPort ,
