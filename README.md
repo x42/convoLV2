@@ -14,8 +14,8 @@ provides latency-free convolution, and serves as a testing implementation of
 the new "options" and "buf-size" extensions added in LV2 1.2.0.  For convoLV2
 to work, the host must:
 
- * Support the feature http://lv2plug.in/ns/ext/buf-size#powerOf2BlockLength
- * Pass the option http://lv2plug.in/ns/ext/buf-size#maxBlockLength to
+ * Support the feature http://lv2plug.in/ns/ext/buf-size/#powerOf2BlockLength
+ * Pass the option http://lv2plug.in/ns/ext/buf-size/#maxBlockLength to
    instantiate()
 
 The plugin works properly, but currently lacks any way to change configuration
@@ -34,8 +34,12 @@ Installation & Usage
 
     make
     sudo make install
-    jalv http://gareus.org/oss/lv2/convoLV2
-    
+    jalv http://gareus.org/oss/lv2/convoLV2#Mono
+    #or
+    jalv http://gareus.org/oss/lv2/convoLV2#MonoToStereo
+    #or
+    jalv http://gareus.org/oss/lv2/convoLV2#Stereo
+
     sudo make uninstall
 
 Make accepts the following parameters: `CFLAGS, LDFLAGS, PREFIX, DESTDIR`
