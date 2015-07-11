@@ -34,11 +34,11 @@ Installation & Usage
 
     make
     sudo make install
-    jalv http://gareus.org/oss/lv2/convoLV2#Mono
+    jalv.gtk http://gareus.org/oss/lv2/convoLV2#Mono
     #or
-    jalv http://gareus.org/oss/lv2/convoLV2#MonoToStereo
+    jalv.gtk http://gareus.org/oss/lv2/convoLV2#MonoToStereo
     #or
-    jalv http://gareus.org/oss/lv2/convoLV2#Stereo
+    jalv.gtk http://gareus.org/oss/lv2/convoLV2#Stereo
 
     sudo make uninstall
 
