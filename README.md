@@ -45,7 +45,7 @@ You really want to package the superset of [x42-plugins](https://github.com/x42/
 Under the hood
 --------------
 
-[libzita-convolver](http://kokkinizita.linuxaudio.org/linuxaudio/downloads/) to
+[libzita-convolver](http://kokkinizita.linuxaudio.org/linuxaudio/downloads/) is used to
 perform the convolution, [libsndfile](http://www.mega-nerd.com/libsndfile/) to read
 the impulse-response and [libsamplerate](http://www.mega-nerd.com/SRC/) to resample
 the IR if necessary.
@@ -54,12 +54,12 @@ convoLV2 was written to demonstrate new features of LV2 1.2.0 (back in 2012):
 
 *   http://lv2plug.in/ns/ext/buf-size/#powerOf2BlockLength - the plugin requires a blocksize that is a power of two.
 *   http://lv2plug.in/ns/ext/buf-size/#maxBlockLength - the plugin only works with blocksizes between 64 and 8192 samples per period.
-*   http://lv2plug.in/ns/ext/patch/ - allow a host to pass filenames to a plugin
-*   http://lv2plug.in/ns/ext/worker/ - on/offline instances. re-loading an IR file is performed in the background, making the plugin realtime safe.
+*   http://lv2plug.in/ns/ext/patch/ - allow a host to pass filenames to a plugin.
+*   http://lv2plug.in/ns/ext/worker/ - on/offline instances. Re-loading an IR file is performed in the background, making the plugin realtime safe.
 
 It since serves as example code for those LV2 extensions.
 
 
 While the convolution engine supports pre-delay, channel-mapping and per-channel gain settings, these parameters
-are currently not exposed in the LV2 interface (hack tip: they are supported in the LV2 DSP and also saved as
-text in the plugin-state).
+are currently not exposed in the LV2 interface (hack tip: they are supported in the LV2 DSP and saved as
+text in the plugin-state which can be directly edited).
