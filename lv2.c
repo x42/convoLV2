@@ -44,12 +44,13 @@
   def(1)
 
 #define ENUMPORT(n) \
-  P_OUTPUT ## n = (n*2+2), \
-  P_INPUT ## n  = (n*2+3),
+  P_OUTPUT ## n = (n*2+3), \
+  P_INPUT ## n  = (n*2+4),
 
 typedef enum {
   P_CONTROL    = 0,
   P_NOTIFY     = 1,
+  P_OUTGAIN    = 2,
 
   LOOP_DEFINE_PORTS(ENUMPORT)
 } PortIndex;
@@ -71,6 +72,9 @@ typedef struct {
   float* output[MAX_CHN];
   const LV2_Atom_Sequence* control_port;
   LV2_Atom_Sequence*       notify_port;
+
+  float * p_output_gain;
+  float output_gain_db, output_gain_target, output_gain;
 
   LV2_Atom_Forge_Frame notify_frame;
 
@@ -171,6 +175,9 @@ instantiate(const LV2_Descriptor*     descriptor,
   self->flag_reinit_in_progress = 0;
   self->clv_online = NULL;
   self->clv_offline = NULL;
+
+  self->output_gain_db = 0;
+  self->output_gain_target = self->output_gain = 1.0;
 
   return (LV2_Handle)self;
 }
@@ -306,6 +313,9 @@ connect_port(LV2_Handle instance,
     case P_NOTIFY:
       self->notify_port = (LV2_Atom_Sequence*)data;
       break;
+    case P_OUTGAIN:
+      self->p_output_gain = (float*)data;
+      break;
   }
 }
 
@@ -324,6 +334,16 @@ run(LV2_Handle instance, uint32_t n_samples)
   for (i=0; i < self->chn_out; i++ ) {
     output[i] = self->output[i];
   }
+
+  if (*self->p_output_gain != self->output_gain_db) {
+	  float g = *self->p_output_gain;
+	  self->output_gain_db = *self->p_output_gain;
+	  if (g < -40) g = -40;
+	  if (g >  40) g =  40;
+	  self->output_gain_target = powf(10.f, 0.05f * g);
+  }
+
+  self->output_gain += .08f * (self->output_gain_target - self->output_gain);
 
   /* Set up forge to write directly to notify output port. */
   const uint32_t notify_capacity = self->notify_port->atom.size;
@@ -383,7 +403,7 @@ run(LV2_Handle instance, uint32_t n_samples)
   clv_convolve(self->clv_online, input, output,
                self->chn_in,
                self->chn_out,
-               n_samples, 1.0);
+               n_samples, self->output_gain);
 }
 
 static void
