@@ -37,8 +37,7 @@ clv2:Mono
 	lv2:minorVersion 4 ;
 	lv2:project <http://gareus.org/oss/lv2/convoLV2> ;
 	lv2:requiredFeature urid:map ,
-		work:schedule ,
-		bufsz:powerOf2BlockLength ;
+		work:schedule ;
 	bufsz:minBlockLength 64 ;
 	bufsz:maxBlockLength 8192 ;
 	lv2:extensionData work:interface ,
@@ -98,8 +97,7 @@ clv2:Stereo
 	lv2:minorVersion 4 ;
 	lv2:project <http://gareus.org/oss/lv2/convoLV2> ;
 	lv2:requiredFeature urid:map ,
-		work:schedule ,
-		bufsz:powerOf2BlockLength ;
+		work:schedule ;
 	lv2:extensionData work:interface ,
 		state:interface ;
 	lv2:optionalFeature lv2:hardRTCapable ;
@@ -173,8 +171,7 @@ clv2:MonoToStereo
 	lv2:minorVersion 4 ;
 	lv2:project <http://gareus.org/oss/lv2/convoLV2> ;
 	lv2:requiredFeature urid:map ,
-		work:schedule ,
-		bufsz:powerOf2BlockLength ;
+		work:schedule ;
 	lv2:extensionData work:interface ,
 		state:interface ;
 	lv2:optionalFeature lv2:hardRTCapable ;
