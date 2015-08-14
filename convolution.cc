@@ -461,7 +461,9 @@ int clv_convolve (LV2convolv *clv,
     const float * const * inbuf, float * const * outbuf,
     const unsigned int in_channel_cnt,
     const unsigned int out_channel_cnt,
-    const unsigned int n_samples) {
+    const unsigned int n_samples,
+    const float output_gain)
+{
   unsigned int i,c;
 
   if (!clv || !clv->convproc) {
@@ -503,8 +505,17 @@ int clv_convolve (LV2convolv *clv,
     return (n_samples);
   }
 
-  for (c = 0; c < out_channel_cnt; ++c)
-    memcpy (outbuf[c], clv->convproc->outdata (c), n_samples * sizeof (float));
+  for (c = 0; c < out_channel_cnt; ++c) {
+	  if (output_gain == 1.0) {
+		  memcpy (outbuf[c], clv->convproc->outdata (c), n_samples * sizeof (float));
+	  } else {
+		  unsigned int s;
+		  float const * const od = clv->convproc->outdata (c);
+		  for (s = 0; s < n_samples; ++s) {
+			  outbuf[c][s] = od[s] * output_gain;
+		  }
+	  }
+  }
 
   return (n_samples);
 }
