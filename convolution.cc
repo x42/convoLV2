@@ -188,7 +188,7 @@ LV2convolv *clv_alloc() {
   clv->ir_fn = NULL;
 
   clv->density = 0.0;
-  clv->size = 204800;
+  clv->size = 0x00100000;
   //fprintf(stderr,"%s", clv_dump_settings(clv));
   return clv;
 }
@@ -251,10 +251,13 @@ int clv_configure (LV2convolv *clv, const char *key, const char *value) {
       if ((0 <= n) && (n < MAX_CHANNEL_MAPS))
         clv->ir_delay[n] = atoi(value);
     }
-  } else if (strcasecmp (key, "convolution.size") == 0) {
+  } else if (strcasecmp (key, "convolution.maxsize") == 0) {
     clv->size = atoi(value);
-    if (clv->size > 0x00100000) {
-      clv->size = 0x00100000;
+    if (clv->size > 0x00400000) {
+      clv->size = 0x00400000;
+    }
+    if (clv->size < 0x00001000) {
+      clv->size = 0x00001000;
     }
   } else {
     return 0;
@@ -266,7 +269,7 @@ char *clv_dump_settings (LV2convolv *clv) {
   if (!clv) return NULL;
   int i;
   size_t off = 0;
-#define MAX_CFG_SIZE ( MAX_CHANNEL_MAPS * 158 + 50 + (clv->ir_fn?strlen(clv->ir_fn):0) )
+#define MAX_CFG_SIZE ( MAX_CHANNEL_MAPS * 160 + 60 + (clv->ir_fn?strlen(clv->ir_fn):0) )
   char *rv = (char*) malloc(MAX_CFG_SIZE * sizeof (char));
 
   for (i=0;i<MAX_CHANNEL_MAPS;i++) {
@@ -277,7 +280,7 @@ char *clv_dump_settings (LV2convolv *clv) {
     off+= sprintf(rv + off, "convolution.source.%d=%d\n",     i, clv->chn_inp[i]); // 21 + d + d
     off+= sprintf(rv + off, "convolution.output.%d=%d\n",     i, clv->chn_out[i]); // 21 + d + d
   }
-  off+= sprintf(rv + off, "convolution.size=%u\n", clv->size);                     // 18 + v
+  off+= sprintf(rv + off, "convolution.maxsize=%u\n", clv->size);                  // 21 + v
   //fprintf(stderr, "%d / %d \n", off, MAX_CFG_SIZE);
   return rv;
 }
@@ -314,6 +317,7 @@ int clv_initialize (
   /* IR file */
   unsigned int nchan = 0;
   unsigned int nfram = 0;
+  unsigned int max_size = 0;
   float *p = NULL; /* temp. IR file buffer */
   float *gb; /* temp. gain-scaled IR file buffer */
 
@@ -345,23 +349,43 @@ int clv_initialize (
   clv->convproc->set_options (options);
   clv->convproc->set_density (clv->density);
 
-  if (clv->convproc->configure (
-        /*in*/  in_channel_cnt,
-        /*out*/ out_channel_cnt,
-        /*max-convolution length */ clv->size,
-        /*quantum*/  buffersize,
-        /*min-part*/ buffersize /* must be >= fragm */,
-        /*max-part*/ buffersize /* Convproc::MAXPART -> stich output every period */
-        )) {
-    fprintf (stderr, "convoLV2: Cannot initialize convolution engine.\n");
+  if (audiofile_read(clv->ir_fn, sample_rate, &p, &nchan, &nfram)) {
+    fprintf(stderr, "convoLV2: failed to read IR.\n");
     delete(clv->convproc);
     clv->convproc = NULL;
     pthread_mutex_unlock(&fftw_planner_lock);
     return -1;
   }
 
-  if (audiofile_read(clv->ir_fn, sample_rate, &p, &nchan, &nfram)) {
-    fprintf(stderr, "convoLV2: failed to read IR.\n");
+  if (nfram == 0 || nchan == 0) {
+    delete(clv->convproc);
+    clv->convproc = NULL;
+    pthread_mutex_unlock(&fftw_planner_lock);
+    return -1;
+  }
+
+  for (c=0; c < MAX_CHANNEL_MAPS; c++) {
+    // TODO only relevant channels
+    if (clv->ir_delay[c] > max_size)  max_size = clv->ir_delay[c];
+  }
+
+  max_size += nfram;
+
+  if (max_size > clv->size) {
+    max_size = clv->size;
+  }
+
+  VERBOSE_printf("convoLV2: max-convolution length %d samples (limit %d), period: %d samples\n", max_size, clv->size, buffersize);
+
+  if (clv->convproc->configure (
+        /*in*/  in_channel_cnt,
+        /*out*/ out_channel_cnt,
+        /*max-convolution length */ max_size,
+        /*quantum*/  buffersize,
+        /*min-part*/ buffersize /* must be >= fragm */,
+        /*max-part*/ buffersize /* Convproc::MAXPART -> stich output every period */
+        )) {
+    fprintf (stderr, "convoLV2: Cannot initialize convolution engine.\n");
     delete(clv->convproc);
     clv->convproc = NULL;
     pthread_mutex_unlock(&fftw_planner_lock);
@@ -383,7 +407,7 @@ int clv_initialize (
   }
 #endif
 
-  VERBOSE_printf("convoLV2: CFG %din, %dout | IR: %dchn, %dsamples\n",
+  VERBOSE_printf("convoLV2: CFG %din, %dout | IR: %dchn, %d samples\n",
       in_channel_cnt, out_channel_cnt, nchan, nfram);
 
   for (c=0; c < MAX_CHANNEL_MAPS; c++) {
