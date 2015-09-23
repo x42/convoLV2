@@ -194,7 +194,7 @@ work(LV2_Handle                  instance,
 
   /* prepare new engine instance */
   if (!self->clv_offline) {
-    DEBUG_printf("allocate offline instance\n");
+    DEBUG_printf("Work: allocate offline instance\n");
     self->clv_offline = clv_alloc();
 
     if (!self->clv_offline) {
@@ -207,13 +207,16 @@ work(LV2_Handle                  instance,
   if (size == sizeof(int)) {
     switch(*((const int*)data)) {
     case CMD_APPLY:
-      DEBUG_printf("apply offline instance\n");
+      DEBUG_printf("Work: apply offline instance\n");
       apply = 1;
       break;
     case CMD_FREE:
-      DEBUG_printf("free offline instance\n");
+      DEBUG_printf("Work: free offline instance\n");
       clv_free(self->clv_offline);
       self->clv_offline=NULL;
+      break;
+    default:
+      DEBUG_printf("Work: invalid command\n");
       break;
     }
   } else {
@@ -222,6 +225,7 @@ work(LV2_Handle                  instance,
     ConvoLV2URIs* uris = &self->uris;
 
     if (obj->body.otype == uris->patch_Set) {
+      DEBUG_printf("Work: Atom Patch\n");
       const LV2_Atom* file_path = read_set_file(uris, obj);
       if (file_path) {
         const char *fn = (const char*)(file_path+1);
@@ -229,15 +233,18 @@ work(LV2_Handle                  instance,
         clv_configure(self->clv_offline, "convolution.ir.file", fn);
         apply = 1;
       }
+    } else {
+      DEBUG_printf("Work: Invalid Atom Msg\n");
     }
   }
 
   if (apply) {
+    DEBUG_printf("Work: initialize offline instance\n");
     clv_initialize(self->clv_offline, self->rate,
                    self->chn_in, self->chn_out,
                    /*64 <= buffer-size <=4096*/ self->bufsize);
 #if 1
-    respond(handle, 1, ""); // size must not be 0. A3 before rev 13146 will igore it
+    respond(handle, 1, ""); // size must not be 0. A3 before rev 13146 will ignore it
 #else
     respond(handle, 0, NULL);
 #endif
@@ -273,8 +280,14 @@ work_response(LV2_Handle  instance,
               uint32_t    size,
               const void* data)
 {
-  // swap engine instances
   convoLV2* self = (convoLV2*)instance;
+
+  if (!self->clv_offline) {
+    return LV2_WORKER_SUCCESS;
+  }
+
+  // swap engine instances
+  DEBUG_printf("Work: swap instances\n");
   LV2convolv *old  = self->clv_online;
   self->clv_online  = self->clv_offline;
   self->clv_offline = old;
@@ -467,9 +480,15 @@ restore(LV2_Handle                  instance,
   uint32_t type;
   uint32_t valflags;
 
+  if (self->clv_offline) {
+    // TODO use lv2_log_error()
+    VERBOSE_printf("State: offline instance in-use, state ignored.\n");
+    return LV2_STATE_ERR_UNKNOWN; // OOM
+  }
+
   /* prepare new engine instance */
   if (!self->clv_offline) {
-    DEBUG_printf("allocate offline instance\n");
+    DEBUG_printf("State: allocate offline instance\n");
     self->clv_offline = clv_alloc();
 
     if (!self->clv_offline) {
@@ -503,10 +522,11 @@ restore(LV2_Handle                  instance,
     DEBUG_printf("PTH: convolution.ir.file=%s\n", path);
     clv_configure(self->clv_offline, "convolution.ir.file", path);
   }
-#if 1 // initialize here -- fails to notify UI.
+
   clv_initialize(self->clv_offline, self->rate, self->chn_in, self->chn_out,
                  /*64 <= buffer-size <=4096*/ self->bufsize);
 
+  DEBUG_printf("State: applied offline instance\n");
   LV2convolv *old   = self->clv_online;
   self->clv_online  = self->clv_offline;
   self->clv_offline = old;
@@ -514,11 +534,9 @@ restore(LV2_Handle                  instance,
   self->flag_reinit_in_progress = 0;
   self->flag_notify_ui = 1;
 
+  DEBUG_printf("State: free offline instance\n");
   clv_free(self->clv_offline);
   self->clv_offline=NULL;
-#else
-  self->bufsize = 0; // kick worker thread in next run cb -> notifies UI
-#endif
   return LV2_STATE_SUCCESS;
 }
 

@@ -19,7 +19,12 @@
 #ifndef CONVOLUTION_H
 #define CONVOLUTION_H
 
-#define DEBUG_printf(FMT, ...) fprintf(stderr, FMT, ##__VA_ARGS__)
+#ifndef NDEBUG
+# define DEBUG_printf(FMT, ...) fprintf(stderr, FMT, ##__VA_ARGS__)
+#else
+# define DEBUG_printf(FMT, ...) 
+#endif
+
 #define VERBOSE_printf(FMT, ...) fprintf(stderr, FMT, ##__VA_ARGS__)
 
 
