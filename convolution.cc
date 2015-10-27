@@ -304,7 +304,7 @@ int clv_initialize (
 		const unsigned int buffersize)
 {
 	unsigned int c;
-	const int n_elem = in_channel_cnt * out_channel_cnt;
+	const unsigned int n_elem = in_channel_cnt * out_channel_cnt;
 
 	/* zita-conv settings */
 	const unsigned int options = 0;
