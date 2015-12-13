@@ -419,8 +419,14 @@ int clv_initialize (
 		// 2x2 true-stereo effect instance
 		for (c = 0; c < n_chan && c < MAX_CHANNEL_MAPS; ++c) {
 			clv->ir_chan[c] = 1 + c;
-			clv->chn_inp[c] = 1 + (c % in_channel_cnt); 
+			clv->chn_inp[c] = 1 + (c % in_channel_cnt);
 			clv->chn_out[c] = 1 + (((c + c / in_channel_cnt) % in_channel_cnt) % out_channel_cnt);
+		}
+		// assign mono input to 1: L -> L , 2: R -> R,
+		for (;n_chan == 1 && c < 2; ++c) {
+			clv->ir_chan[c] = 1;
+			clv->chn_inp[c] = 1 + (c % in_channel_cnt);
+			clv->chn_out[c] = 1 + (c % out_channel_cnt);
 		}
 	}
 	else {
