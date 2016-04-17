@@ -518,6 +518,7 @@ int clv_convolve (LV2convolv *clv,
 	unsigned int c;
 
 	if (!clv || !clv->convproc) {
+		silent_output(outbuf, out_channel_cnt, n_samples);
 		return (0);
 	}
 
