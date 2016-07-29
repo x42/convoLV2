@@ -1,6 +1,6 @@
 /* convoLV2 -- LV2 convolution plugin
  *
- * Copyright (C) 2012 Robin Gareus <robin@gareus.org>
+ * Copyright (C) 2012-2016 Robin Gareus <robin@gareus.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -496,6 +496,11 @@ restore(LV2_Handle                  instance,
     }
   }
 
+#if 1 // prevent concurrent run() mess
+  // should use atomic -- but really hosts need to be fixed instead
+  self->flag_reinit_in_progress = 1;
+#endif
+
   const void* value = retrieve(handle, self->uris.clv2_state, &size, &type, &valflags);
 
   if (value) {
@@ -523,6 +528,13 @@ restore(LV2_Handle                  instance,
     clv_configure(self->clv_offline, "convolution.ir.file", path);
   }
 
+#if 0
+  /* run() and restore() must not be called concurrently.
+   * except some hosts do..
+   *
+   * in any case re-initialize in a background thread to not
+   * block run() for a long time.
+   */
   clv_initialize(self->clv_offline, self->rate, self->chn_in, self->chn_out,
                  /*64 <= buffer-size <=4096*/ self->bufsize);
 
@@ -537,6 +549,10 @@ restore(LV2_Handle                  instance,
   DEBUG_printf("State: free offline instance\n");
   clv_free(self->clv_offline);
   self->clv_offline=NULL;
+#else
+  int d = CMD_APPLY;
+  self->schedule->schedule_work(self->schedule->handle, sizeof(int), &d);
+#endif
   return LV2_STATE_SUCCESS;
 }
 
