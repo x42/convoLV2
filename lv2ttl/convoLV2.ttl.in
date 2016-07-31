@@ -42,7 +42,7 @@ clv2:Mono
 	bufsz:maxBlockLength 8192 ;
 	lv2:extensionData work:interface ,
 		state:interface ;
-	lv2:optionalFeature lv2:hardRTCapable, <http://ardour.org/lv2/ext#noSampleAccurateControls> ;
+	lv2:optionalFeature lv2:hardRTCapable, state:threadSafeRestore, <http://ardour.org/lv2/ext#noSampleAccurateControls> ;
 	@CLV2UI@
 	patch:writable clv2:impulse ;
 	lv2:port [

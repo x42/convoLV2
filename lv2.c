@@ -480,6 +480,20 @@ restore(LV2_Handle                  instance,
   uint32_t type;
   uint32_t valflags;
 
+  /* Get the work scheduler provided to restore() (state:threadSafeRestore
+     support), but fall back to instantiate() schedules (spec-violating
+     workaround for broken hosts). */
+  LV2_Worker_Schedule* schedule = self->schedule;
+  for (int i = 0; features[i]; ++i) {
+    if (!strcmp(features[i]->URI, LV2_WORKER__schedule)) {
+      DEBUG_printf("State: using thread-safe restore scheduler\n");
+      schedule = (LV2_Worker_Schedule*)features[i]->data;
+    }
+  }
+  if (schedule == self->schedule) {
+    DEBUG_printf("State: warning: using run() scheduler to restore\n");
+  }
+
   if (self->clv_offline) {
     // TODO use lv2_log_error()
     VERBOSE_printf("State: offline instance in-use, state ignored.\n");
@@ -551,7 +565,7 @@ restore(LV2_Handle                  instance,
   self->clv_offline=NULL;
 #else
   int d = CMD_APPLY;
-  self->schedule->schedule_work(self->schedule->handle, sizeof(int), &d);
+  schedule->schedule_work(self->schedule->handle, sizeof(int), &d);
 #endif
   return LV2_STATE_SUCCESS;
 }
