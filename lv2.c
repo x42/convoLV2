@@ -349,11 +349,11 @@ run(LV2_Handle instance, uint32_t n_samples)
   }
 
   if (*self->p_output_gain != self->output_gain_db) {
-	  float g = *self->p_output_gain;
-	  self->output_gain_db = *self->p_output_gain;
-	  if (g < -40) g = -40;
-	  if (g >  40) g =  40;
-	  self->output_gain_target = powf(10.f, 0.05f * g);
+    float g = *self->p_output_gain;
+    self->output_gain_db = *self->p_output_gain;
+    if (g < -40) g = -40;
+    if (g >  40) g =  40;
+    self->output_gain_target = powf(10.f, 0.05f * g);
   }
 
   self->output_gain += .08f * (self->output_gain_target - self->output_gain);
