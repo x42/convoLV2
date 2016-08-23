@@ -494,7 +494,7 @@ errout:
 }
 
 int clv_is_active (LV2convolv *clv) {
-	if (!clv || !clv->convproc || !!clv->ir_fn) {
+	if (!clv || !clv->convproc || !clv->ir_fn) {
 		return 0;
 	}
 	return 1;
