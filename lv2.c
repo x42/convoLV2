@@ -359,13 +359,17 @@ run(LV2_Handle instance, uint32_t n_samples)
   self->output_gain += .08f * (self->output_gain_target - self->output_gain);
 
   /* Set up forge to write directly to notify output port. */
-  const uint32_t notify_capacity = self->notify_port->atom.size;
-  lv2_atom_forge_set_buffer(&self->forge,
-                            (uint8_t*)self->notify_port,
-                            notify_capacity);
+  if (self->notify_port) {
+    const uint32_t notify_capacity = self->notify_port->atom.size;
+    lv2_atom_forge_set_buffer(&self->forge,
+                              (uint8_t*)self->notify_port,
+                              notify_capacity);
 
-  /* Start a sequence in the notify output port. */
-  lv2_atom_forge_sequence_head(&self->forge, &self->notify_frame, 0);
+    /* Start a sequence in the notify output port. */
+    lv2_atom_forge_sequence_head(&self->forge, &self->notify_frame, 0);
+  }
+
+  bool silent = false;
 
   /* re-init engine if block-size has changed */
   if (self->bufsize != n_samples) {
@@ -377,22 +381,21 @@ run(LV2_Handle instance, uint32_t n_samples)
       for (i=0; i < self->chn_out; i++ ) {
         memset(output[i], 0, sizeof(float) * n_samples);
       }
-      // TODO: notify user (once)
-      return;
-    }
-
-    if (!self->flag_reinit_in_progress) {
-      self->flag_reinit_in_progress = 1;
-      self->bufsize = n_samples;
-      int d = CMD_APPLY;
-      self->schedule->schedule_work(self->schedule->handle, sizeof(int), &d);
+      silent = true;
+    } else {
+      if (!self->flag_reinit_in_progress && clv_is_active(self->clv_online)) {
+	self->flag_reinit_in_progress = 1;
+	self->bufsize = n_samples;
+	int d = CMD_APPLY;
+	self->schedule->schedule_work(self->schedule->handle, sizeof(int), &d);
+      }
     }
   }
 
   /* don't touch any settings if re-init is scheduled or in progress
    * TODO re-queue them ?
    */
-  if (!self->flag_reinit_in_progress) {
+  if (!self->flag_reinit_in_progress && self->control_port && self->notify_port) {
     /* Read incoming events */
     LV2_ATOM_SEQUENCE_FOREACH(self->control_port, ev) {
       const LV2_Atom_Object* obj = (LV2_Atom_Object*)&ev->body;
@@ -408,11 +411,14 @@ run(LV2_Handle instance, uint32_t n_samples)
   }
 
   /* send current setting to UI */
-  if (self->flag_notify_ui) {
+  if (self->flag_notify_ui && self->notify_port) {
     self->flag_notify_ui = 0;
     inform_ui(instance);
   }
 
+  if (silent) {
+    return;
+  }
   clv_convolve(self->clv_online, input, output,
                self->chn_in,
                self->chn_out,
@@ -517,6 +523,7 @@ restore(LV2_Handle                  instance,
 
   const void* value = retrieve(handle, self->uris.clv2_state, &size, &type, &valflags);
 
+  bool ok = true;
   if (value) {
     const char* cfg = (const char*)value;
     const char *te,*ts = cfg;
@@ -532,6 +539,8 @@ restore(LV2_Handle                  instance,
       }
       ts=te+1;
     }
+  } else {
+    ok = false;
   }
 
   value = retrieve(handle, self->uris.clv2_impulse, &size, &type, &valflags);
@@ -540,6 +549,16 @@ restore(LV2_Handle                  instance,
     const char* path = (const char*)value;
     DEBUG_printf("PTH: convolution.ir.file=%s\n", path);
     clv_configure(self->clv_offline, "convolution.ir.file", path);
+  } else  {
+    ok = false;
+  }
+
+  if (!ok) {
+    DEBUG_printf("State: incomplete state. Free offline instance\n");
+    clv_free(self->clv_offline);
+    self->clv_offline = 0;
+    self->flag_reinit_in_progress = 0;
+    return LV2_STATE_ERR_NO_PROPERTY;
   }
 
 #if 0
