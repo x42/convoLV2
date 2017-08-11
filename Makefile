@@ -8,6 +8,7 @@ OPTIMIZATIONS ?= -msse -msse2 -mfpmath=sse -ffast-math -fomit-frame-pointer -O3 
 PREFIX ?= /usr/local
 CXXFLAGS ?= $(OPTIMIZATIONS) -Wall
 LIBDIR ?= lib
+STRIP  ?= strip
 BUILDGTK ?= no
 
 ###############################################################################
@@ -22,9 +23,14 @@ UNAME=$(shell uname)
 ifeq ($(UNAME),Darwin)
   LV2LDFLAGS=-dynamiclib
   LIB_EXT=.dylib
+  STRIPFLAGS=-u -r -arch all -s lv2syms
+  UISTRIPFLAGS=-u -r -arch all -s lv2uisyms
+  targets+=lv2syms lv2uisyms
 else
   LV2LDFLAGS=-Wl,-Bstatic -Wl,-Bdynamic
   LIB_EXT=.so
+  STRIPFLAGS=-s
+  UISTRIPFLAGS=-s
 endif
 
 ifneq ($(XWIN),)
@@ -94,6 +100,12 @@ default: all
 
 all: $(BUILDDIR)manifest.ttl $(BUILDDIR)$(LV2NAME).ttl $(targets)
 
+lv2syms:
+	echo "_lv2_descriptor" > lv2syms
+
+lv2uisyms:
+	echo "_lv2ui_descriptor" > lv2uisyms
+
 $(BUILDDIR)manifest.ttl: lv2ttl/manifest.ttl.in lv2ttl/manifest.gui.ttl.in
 	@mkdir -p $(BUILDDIR)
 	sed "s/@LV2NAME@/$(LV2NAME)/;s/@LV2GUI@/$(LV2GUI)/;s/@LIB_EXT@/$(LIB_EXT)/" \
@@ -116,11 +128,13 @@ $(BUILDDIR)$(LV2NAME)$(LIB_EXT): lv2.c convolution.cc uris.h
 	  -o $(BUILDDIR)$(LV2NAME)$(LIB_EXT) lv2.c convolution.cc \
 	  $(LIBZITACONVOLVER) \
 	  -shared $(LV2LDFLAGS) $(LDFLAGS) $(LOADLIBES)
+	$(STRIP) $(STRIPFLAGS) $(BUILDDIR)$(LV2NAME)$(LIB_EXT)
 
 $(BUILDDIR)$(LV2GUI)$(LIB_EXT): ui.c uris.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(GTKCFLAGS) \
 	  -o $(BUILDDIR)$(LV2GUI)$(LIB_EXT) ui.c \
 		-shared $(LV2LDFLAGS) $(LDFLAGS) $(GTKLIBS)
+	$(STRIP) $(UISTRIPFLAGS) $(BUILDDIR)$(LV2GUI)$(LIB_EXT)
 
 
 # install/uninstall/clean target definitions
@@ -139,7 +153,8 @@ uninstall:
 
 clean:
 	rm -f $(BUILDDIR)manifest.ttl $(BUILDDIR)$(LV2NAME).ttl \
-		$(BUILDDIR)$(LV2NAME)$(LIB_EXT) $(BUILDDIR)$(LV2GUI)$(LIB_EXT)
+		$(BUILDDIR)$(LV2NAME)$(LIB_EXT) $(BUILDDIR)$(LV2GUI)$(LIB_EXT) \
+		lv2syms lv2uisyms
 	rm -rf $(BUILDDIR)*.dSYM
 	-test -d $(BUILDDIR) && rmdir $(BUILDDIR) || true
 
