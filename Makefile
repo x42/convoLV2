@@ -18,6 +18,7 @@ LV2DIR ?= $(PREFIX)/$(LIBDIR)/lv2
 LV2NAME=convoLV2
 LV2GUI=convoLV2UI
 BUNDLE=convo.lv2
+targets=
 
 UNAME=$(shell uname)
 ifeq ($(UNAME),Darwin)
@@ -88,7 +89,7 @@ endif
 GTKCFLAGS = `pkg-config --cflags gtk+-2.0`
 GTKLIBS   = `pkg-config --libs gtk+-2.0`
 
-targets= $(BUILDDIR)$(LV2NAME)$(LIB_EXT)
+targets+= $(BUILDDIR)$(LV2NAME)$(LIB_EXT)
 
 ifneq ($(BUILDGTK), no)
 	targets+=$(BUILDDIR)$(LV2GUI)$(LIB_EXT)
