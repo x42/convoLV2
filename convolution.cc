@@ -156,6 +156,7 @@ static int audiofile_read (const char *fn, const int sample_rate, float **buf, u
 
 			if (n_sp) *n_sp = (unsigned int) src_data.output_frames_gen;
 			free(rdb);
+			src_delete  (src_state);
 		}
 	}
 
