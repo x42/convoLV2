@@ -39,6 +39,7 @@
 #include <math.h>
 #include <string.h>
 #include <stdint.h>
+#include <sched.h>
 #include <pthread.h>
 #include <assert.h>
 
@@ -378,7 +379,7 @@ int clv_initialize (
 				/*max-convolution length */ max_size,
 				/*quantum*/  buffersize,
 				/*min-part*/ buffersize /* must be >= fragm */,
-				/*max-part*/ buffersize /* Convproc::MAXPART -> stich output every period */
+				/*max-part* buffersize */ Convproc::MAXPART /*-> stich output every period */
 				)) {
 		fprintf (stderr, "convoLV2: Cannot initialize convolution engine.\n");
 		goto errout;
@@ -477,7 +478,7 @@ int clv_initialize (
 	clv->convproc->print (stderr);
 #endif
 
-	if (clv->convproc->start_process (0, 0)) {
+	if (clv->convproc->start_process (0, SCHED_FIFO)) {
 		fprintf(stderr, "convoLV2: Cannot start processing.\n");
 		goto errout;
 	}
@@ -554,7 +555,7 @@ int clv_convolve (LV2convolv *clv,
 	}
 #endif
 
-	int f = clv->convproc->process (false);
+	int f = clv->convproc->process (true);
 
 	if (f /*&Convproc::FL_LOAD)*/ ) {
 		/* Note this will actually never happen in sync-mode */
