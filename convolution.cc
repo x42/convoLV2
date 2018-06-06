@@ -47,8 +47,8 @@
 #include <samplerate.h>
 #include "convolution.h"
 
-#if ZITA_CONVOLVER_MAJOR_VERSION != 3
-# error "This programs requires zita-convolver 3.x.x"
+#if ZITA_CONVOLVER_MAJOR_VERSION != 3 && ZITA_CONVOLVER_MAJOR_VERSION != 4
+# error "This programs requires zita-convolver 3 or 4"
 #endif
 
 #ifndef SRC_QUALITY // alternatives: SRC_SINC_FASTEST, SRC_SINC_MEDIUM_QUALITY, (SRC_ZERO_ORDER_HOLD, SRC_LINEAR)
@@ -344,7 +344,9 @@ int clv_initialize (
 
 	clv->convproc = new Convproc;
 	clv->convproc->set_options (options);
+#if ZITA_CONVOLVER_MAJOR_VERSION == 3
 	clv->convproc->set_density (clv->density);
+#endif
 
 	if (audiofile_read (clv->ir_fn, sample_rate, &p, &n_chan, &n_frames)) {
 		fprintf(stderr, "convoLV2: failed to read IR.\n");
@@ -379,6 +381,9 @@ int clv_initialize (
 				/*quantum*/  buffersize,
 				/*min-part*/ buffersize /* must be >= fragm */,
 				/*max-part*/ buffersize /* Convproc::MAXPART -> stich output every period */
+#if ZITA_CONVOLVER_MAJOR_VERSION == 4
+				, clv->density
+#endif
 				)) {
 		fprintf (stderr, "convoLV2: Cannot initialize convolution engine.\n");
 		goto errout;

@@ -70,7 +70,7 @@ endif
 
 ifeq ($(LIBZITACONVOLVER),)
   ifeq ($(shell test -f /usr/include/zita-convolver.h -o -f /usr/local/include/zita-convolver.h || echo no ), no)
-    $(error "libzita-convolver3, is required")
+    $(error "libzita-convolver3 or 4, is required")
   endif
   LOADLIBES += -lzita-convolver
 endif
