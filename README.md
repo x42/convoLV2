@@ -18,7 +18,7 @@ for the required configuration, channel-assignment wraps around (modulo file cha
 
 convoLV2's main use-case is cabinet-emulation and generic signal processing where latency matters.
 
-For fancy reverb applications, see also [IR.lv2](http://factorial.hu/plugins/lv2/ir).
+For fancy reverb applications, see also [IR.lv2](https://tomszilagyi.github.io/plugins/ir.lv2/)
 
 Install
 -------
