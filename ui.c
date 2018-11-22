@@ -25,11 +25,17 @@
 #include "lv2/lv2plug.in/ns/extensions/ui/ui.h"
 #include "./uris.h"
 
+typedef struct _LV2UI_Request_Parameter {
+	LV2UI_Feature_Handle handle;
+	uint32_t (*request)(LV2UI_Feature_Handle handle, LV2_URID key);
+} LV2UI_Request_Parameter;
+
 typedef struct {
 	LV2_Atom_Forge forge;
 
 	LV2_URID_Map* map;
 	ConvoLV2URIs   uris;
+	LV2UI_Request_Parameter* request_parameter;
 
 	LV2UI_Write_Function write;
 	LV2UI_Controller     controller;
@@ -50,6 +56,12 @@ on_load_clicked(GtkWidget* widget,
                 void*      handle)
 {
 	ConvoLV2UI* ui = (ConvoLV2UI*)handle;
+
+	if (ui->request_parameter) {
+		if (ui->request_parameter->request (ui->request_parameter->handle, ui->uris.clv2_impulse) == 0) {
+			return;
+		}
+	}
 
 	/* Create a dialog to select a IR file. */
 	GtkWidget* dialog = gtk_file_chooser_dialog_new(
@@ -129,12 +141,16 @@ instantiate(const LV2UI_Descriptor*   descriptor,
 	ui->btn_load   = NULL;
 	ui->label      = NULL;
 	ui->filename   = NULL;
+	ui->request_parameter = NULL;
 
 	*widget = NULL;
 
 	for (int i = 0; features[i]; ++i) {
 		if (!strcmp(features[i]->URI, LV2_URID_URI "#map")) {
 			ui->map = (LV2_URID_Map*)features[i]->data;
+		}
+		if (!strcmp(features[i]->URI, LV2_UI_PREFIX "requestParameter")) {
+			ui->request_parameter = (LV2UI_Request_Parameter*) features[i]->data;
 		}
 	}
 

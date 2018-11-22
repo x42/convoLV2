@@ -9,7 +9,7 @@ PREFIX ?= /usr/local
 CXXFLAGS ?= $(OPTIMIZATIONS) -Wall
 LIBDIR ?= lib
 STRIP  ?= strip
-BUILDGTK ?= no
+BUILDGTK ?= yes
 
 ###############################################################################
 BUILDDIR=build/
