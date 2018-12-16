@@ -4,20 +4,21 @@
 #   make CXXFLAGS=-O2
 #   make install DESTDIR=$(CURDIR)/debian/convoLV2 PREFIX=/usr
 #
-OPTIMIZATIONS ?= -msse -msse2 -mfpmath=sse -ffast-math -fomit-frame-pointer -O3 -fno-finite-math-only
 PREFIX ?= /usr/local
+LV2DIR ?= $(PREFIX)/lib/lv2
+
+OPTIMIZATIONS ?= -msse -msse2 -mfpmath=sse -ffast-math -fomit-frame-pointer -O3 -fno-finite-math-only
 CXXFLAGS ?= $(OPTIMIZATIONS) -Wall
-LIBDIR ?= lib
-STRIP  ?= strip
+STRIP ?= strip
 BUILDGTK ?= no
 
 ###############################################################################
 BUILDDIR=build/
 
-LV2DIR ?= $(PREFIX)/$(LIBDIR)/lv2
 LV2NAME=convoLV2
 LV2GUI=convoLV2UI
 BUNDLE=convo.lv2
+
 targets=
 
 UNAME=$(shell uname)
@@ -37,10 +38,13 @@ endif
 ifneq ($(XWIN),)
   CC=$(XWIN)-gcc
   CXX=$(XWIN)-g++
+  STRIP=$(XWIN)-strip
   LV2LDFLAGS=-Wl,-Bstatic -Wl,-Bdynamic -Wl,--as-needed -lpthread
   LIB_EXT=.dll
   BUILDGTK=no
   override LDFLAGS += -static-libgcc -static-libstdc++
+else
+  override CXXFLAGS +=-fPIC
 endif
 
 # check for build-dependencies
@@ -77,7 +81,6 @@ endif
 
 # add library dependent flags and libs
 
-override CXXFLAGS +=-fPIC
 override CXXFLAGS +=`pkg-config --cflags glib-2.0 lv2 sndfile samplerate`
 override LOADLIBES +=`pkg-config --libs sndfile samplerate` -lm
 
@@ -125,6 +128,7 @@ ifneq ($(BUILDGTK), no)
 endif
 
 $(BUILDDIR)$(LV2NAME)$(LIB_EXT): lv2.c convolution.cc uris.h
+	@mkdir -p $(BUILDDIR)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) \
 	  -o $(BUILDDIR)$(LV2NAME)$(LIB_EXT) lv2.c convolution.cc \
 	  $(LIBZITACONVOLVER) \
