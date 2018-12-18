@@ -320,11 +320,6 @@ int clv_initialize (
 
 	clv->fragment_size = buffersize;
 
-	if (zita_convolver_major_version () != ZITA_CONVOLVER_MAJOR_VERSION) {
-		fprintf (stderr, "convoLV2: Zita-convolver version does not match.\n");
-		return -1;
-	}
-
 	if (clv->convproc) {
 		fprintf (stderr, "convoLV2: already initialized.\n");
 		return (-1);
