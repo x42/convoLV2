@@ -460,7 +460,9 @@ save(LV2_Handle                instance,
     }
   }
 
-  if (map_path) {
+  if (!map_path) {
+    return LV2_STATE_ERR_NO_FEATURE;
+  } else {
     char fn[1024]; // PATH_MAX
     if (clv_query_setting(self->clv_online, "convolution.ir.file", fn, 1024) > 0 ) {
       char* apath = map_path->abstract_path(map_path->handle, fn);
@@ -468,7 +470,9 @@ save(LV2_Handle                instance,
             apath, strlen(apath) + 1,
             self->uris.atom_Path,
             LV2_STATE_IS_POD | LV2_STATE_IS_PORTABLE);
+#ifndef _WIN32 // https://github.com/drobilla/lilv/issues/14
       free(apath);
+#endif
     }
   }
   return LV2_STATE_SUCCESS;
@@ -490,11 +494,18 @@ restore(LV2_Handle                  instance,
      support), but fall back to instantiate() schedules (spec-violating
      workaround for broken hosts). */
   LV2_Worker_Schedule* schedule = self->schedule;
+  LV2_State_Map_Path* map_path = NULL;
   for (int i = 0; features[i]; ++i) {
     if (!strcmp(features[i]->URI, LV2_WORKER__schedule)) {
       DEBUG_printf("State: using thread-safe restore scheduler\n");
       schedule = (LV2_Worker_Schedule*)features[i]->data;
     }
+    if (!strcmp(features[i]->URI, LV2_STATE__mapPath)) {
+      map_path = (LV2_State_Map_Path*)features[i]->data;
+    }
+  }
+  if (!map_path) {
+    return LV2_STATE_ERR_NO_FEATURE;
   }
   if (schedule == self->schedule) {
     DEBUG_printf("State: warning: using run() scheduler to restore\n");
@@ -545,10 +556,14 @@ restore(LV2_Handle                  instance,
 
   value = retrieve(handle, self->uris.clv2_impulse, &size, &type, &valflags);
 
+
   if (value) {
-    const char* path = (const char*)value;
+    char* path = map_path->absolute_path (map_path->handle, (const char*) value);
     DEBUG_printf("PTH: convolution.ir.file=%s\n", path);
     clv_configure(self->clv_offline, "convolution.ir.file", path);
+#ifndef _WIN32 // https://github.com/drobilla/lilv/issues/14
+    free (path);
+#endif
   } else  {
     ok = false;
   }
