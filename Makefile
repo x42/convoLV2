@@ -9,7 +9,10 @@ LV2DIR ?= $(PREFIX)/lib/lv2
 
 OPTIMIZATIONS ?= -msse -msse2 -mfpmath=sse -ffast-math -fomit-frame-pointer -O3 -fno-finite-math-only
 CXXFLAGS ?= $(OPTIMIZATIONS) -Wall
+
+PKG_CONFIG?=pkg-config
 STRIP ?= strip
+
 BUILDGTK ?= no
 
 ###############################################################################
@@ -49,22 +52,22 @@ endif
 
 # check for build-dependencies
 
-ifeq ($(shell pkg-config --exists lv2 || echo no), no)
+ifeq ($(shell $(PKG_CONFIG) --exists lv2 || echo no), no)
   $(error "LV2 SDK was not found")
 endif
 
-ifeq ($(shell pkg-config --atleast-version=1.4 lv2 || echo no), no)
+ifeq ($(shell $(PKG_CONFIG) --atleast-version=1.4 lv2 || echo no), no)
   $(error "LV2 SDK needs to be version 1.4 or later")
 endif
 
-ifneq ($(shell pkg-config --exists sndfile samplerate\
+ifneq ($(shell $(PKG_CONFIG) --exists sndfile samplerate\
         && echo yes), yes)
   $(error "libsndfile and libsamplerate are required")
 endif
 
 CLV2UI=
 ifneq ($(BUILDGTK), no)
-  ifeq ($(shell pkg-config --exists glib-2.0 gtk+-2.0 || echo no), no)
+  ifeq ($(shell $(PKG_CONFIG) --exists glib-2.0 gtk+-2.0 || echo no), no)
     $(warning "The optional plugin GUI requires glib-2.0 and gtk+-2.0")
     $(warning "call  make BUILDGTK=no  to disable the GUI.")
     $(error "Aborting build.")
@@ -81,16 +84,16 @@ endif
 
 # add library dependent flags and libs
 
-override CXXFLAGS +=`pkg-config --cflags glib-2.0 lv2 sndfile samplerate`
-override LOADLIBES +=`pkg-config --libs sndfile samplerate` -lm
+override CXXFLAGS +=`$(PKG_CONFIG) --cflags glib-2.0 lv2 sndfile samplerate`
+override LOADLIBES +=`$(PKG_CONFIG) --libs sndfile samplerate` -lm
 
-ifeq ($(shell pkg-config --atleast-version=1.8.1 lv2 && echo yes), yes)
+ifeq ($(shell $(PKG_CONFIG) --atleast-version=1.8.1 lv2 && echo yes), yes)
 	override CXXFLAGS += -DHAVE_LV2_1_8
 endif
 
 
-GTKCFLAGS = `pkg-config --cflags gtk+-2.0`
-GTKLIBS   = `pkg-config --libs gtk+-2.0`
+GTKCFLAGS = `$(PKG_CONFIG) --cflags gtk+-2.0`
+GTKLIBS   = `$(PKG_CONFIG) --libs gtk+-2.0`
 
 targets+= $(BUILDDIR)$(LV2NAME)$(LIB_EXT)
 
