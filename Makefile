@@ -7,7 +7,7 @@
 PREFIX ?= /usr/local
 LV2DIR ?= $(PREFIX)/lib/lv2
 
-OPTIMIZATIONS ?= -msse -msse2 -mfpmath=sse -ffast-math -fomit-frame-pointer -O3 -fno-finite-math-only
+OPTIMIZATIONS ?= -msse -msse2 -mfpmath=sse -ffast-math -fomit-frame-pointer -O3 -fno-finite-math-only -DNDEBUG
 CXXFLAGS ?= $(OPTIMIZATIONS) -Wall
 
 PKG_CONFIG?=pkg-config
@@ -47,7 +47,7 @@ ifneq ($(XWIN),)
   BUILDGTK=no
   override LDFLAGS += -static-libgcc -static-libstdc++
 else
-  override CXXFLAGS +=-fPIC
+  override CXXFLAGS += -fPIC -fvisibility=hidden
 endif
 
 # check for build-dependencies
