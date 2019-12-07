@@ -444,6 +444,9 @@ save(LV2_Handle                instance,
   int i;
   convoLV2* self = (convoLV2*)instance;
   LV2_State_Map_Path* map_path = NULL;
+#ifdef HAVE_LV2_FREE_PATH
+  LV2_State_Free_Path* free_path = NULL;
+#endif
 
   char *cfg = clv_dump_settings(self->clv_online);
   if (cfg) {
@@ -458,6 +461,11 @@ save(LV2_Handle                instance,
     if (!strcmp(features[i]->URI, LV2_STATE__mapPath)) {
       map_path = (LV2_State_Map_Path*)features[i]->data;
     }
+#ifdef HAVE_LV2_FREE_PATH
+    if (!strcmp(features[i]->URI, LV2_STATE__freePath)) {
+      free_path = (LV2_State_Free_Path*)features[i]->data;
+    }
+#endif
   }
 
   if (!map_path) {
@@ -470,9 +478,15 @@ save(LV2_Handle                instance,
             apath, strlen(apath) + 1,
             self->uris.atom_Path,
             LV2_STATE_IS_POD | LV2_STATE_IS_PORTABLE);
-#ifndef _WIN32 // https://github.com/drobilla/lilv/issues/14
-      free(apath);
+
+#ifdef HAVE_LV2_FREE_PATH
+      if (free_path) {
+	free_path->free_path (free_path->handle, apath);
+      } else {
+#elif !defined _WIN32
+	free(apath);
 #endif
+      }
     }
   }
   return LV2_STATE_SUCCESS;
