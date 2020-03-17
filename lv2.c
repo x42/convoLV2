@@ -227,10 +227,15 @@ work(LV2_Handle                  instance,
     if (obj->body.otype == uris->patch_Set) {
       DEBUG_printf("Work: Atom Patch\n");
       const LV2_Atom* file_path = read_set_file(uris, obj);
-      if (file_path) {
+      if (file_path && file_path->size > 0 && file_path->size < 1024) {
         const char *fn = (const char*)(file_path+1);
-        DEBUG_printf("load IR %s\n", fn);
-        clv_configure(self->clv_offline, "convolution.ir.file", fn);
+	char path[1024];
+	strncpy (path, fn, file_path->size);
+	/* some version of jalv did not NULL terminate:
+	 * https://github.com/drobilla/jalv/issues/32 */
+	path[file_path->size] = '\0';
+        DEBUG_printf("load IR %s\n", path);
+        clv_configure(self->clv_offline, "convolution.ir.file", path);
         apply = 1;
       }
     } else {
