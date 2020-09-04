@@ -47,7 +47,7 @@ ifneq ($(XWIN),)
   BUILDGTK=no
   override LDFLAGS += -static-libgcc -static-libstdc++
 else
-  override CXXFLAGS += -fPIC -fvisibility=hidden
+  override CXXFLAGS += -fPIC -fvisibility=hidden -pthread
 endif
 
 # check for build-dependencies
