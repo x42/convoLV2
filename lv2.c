@@ -307,7 +307,7 @@ work_response(LV2_Handle  instance,
   self->clv_online  = self->clv_offline;
   self->clv_offline = old;
 
-  inform_ui(instance);
+  self->flag_notify_ui = 1;
 
   int d = CMD_FREE;
   self->schedule->schedule_work(self->schedule->handle, sizeof(int), &d);
