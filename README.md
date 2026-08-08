@@ -1,3 +1,6 @@
+THIS PLUGIN IS NO LONGER MAINTAINED. PLEASE USE https://github.com/x42/zconvo.lv2/ INSTEAD
+------------------------------------------------------------------------------------------
+
 convoLV2
 ========
 
